@@ -5,16 +5,30 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+
       - run: flutter pub get
+
+      # 1. Force Flutter to generate the Podfile without building
+      - name: Generate Podfile
+        run: flutter build ios --config-only
+
+      # 2. Automatically change the platform version to 13.0
+      - name: Fix Podfile Platform Version
+        run: sed -i '' "s/^# platform :ios.*/platform :ios, '13.0'/" ios/Podfile
+
+      # 3. Run the actual build
       - run: flutter build ios --release --no-codesign
+
       - name: Package into IPA
         run: |
           mkdir Payload
           cp -r build/ios/iphoneos/Runner.app Payload
           zip -r app.ipa Payload
+
       - uses: actions/upload-artifact@v4
         with:
           name: ios-app
