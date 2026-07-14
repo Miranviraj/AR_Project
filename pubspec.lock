@@ -9,22 +9,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.3.1"
-  ar_flutter_plugin_updated:
+  ar_flutter_plugin_2:
     dependency: "direct main"
     description:
-      name: ar_flutter_plugin_updated
-      sha256: "015fa1bfd2383cea7d195dc9f76a49c1ebe079b48fe442ff5219501d03213c53"
+      name: ar_flutter_plugin_2
+      sha256: "8c0fa8b55d3c789e9ad275436980430892a6814e760b4a35677e5cc1b8dc5e21"
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.1"
-  archive:
-    dependency: transitive
-    description:
-      name: archive
-      sha256: cb6a278ef2dbb298455e1a713bda08524a175630ec643a242c399c932a0a1f7d
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.6.1"
+    version: "0.0.3"
   args:
     dependency: transitive
     description:
@@ -259,14 +251,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_tflite:
-    dependency: "direct main"
-    description:
-      name: flutter_tflite
-      sha256: "0d6b622af0fe90d92bd4d9bd28b98c3b213217f36ccb7b444d7104a742b03363"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.1"
   flutter_tts:
     dependency: "direct main"
     description:
@@ -284,10 +268,10 @@ packages:
     dependency: "direct main"
     description:
       name: geolocator
-      sha256: f62bcd90459e63210bbf9c35deb6a51c521f992a78de19a1fe5c11704f9530e2
+      sha256: "149876cc5207a0f5daf4fdd3bfcf0a0f27258b3fe95108fa084f527ad0568f1b"
       url: "https://pub.dev"
     source: hosted
-    version: "13.0.4"
+    version: "12.0.0"
   geolocator_android:
     dependency: transitive
     description:
@@ -368,14 +352,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
-  image:
-    dependency: transitive
-    description:
-      name: image
-      sha256: "8e9d133755c3e84c73288363e6343157c383a0c6c56fc51afcc5d4d7180306d6"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.3.0"
   image_picker:
     dependency: "direct main"
     description:
@@ -704,14 +680,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.1"
-  petitparser:
-    dependency: transitive
-    description:
-      name: petitparser
-      sha256: "91bd59303e9f769f108f8df05e371341b15d59e995e6806aefab827b58336675"
-      url: "https://pub.dev"
-    source: hosted
-    version: "7.0.2"
   platform:
     dependency: transitive
     description:
@@ -744,6 +712,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  quiver:
+    dependency: transitive
+    description:
+      name: quiver
+      sha256: ea0b925899e64ecdfbf9c7becb60d5b50e706ade44a85b2363be2a22d88117d2
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.2"
   record_use:
     dependency: transitive
     description:
@@ -869,6 +845,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.10"
+  tflite_flutter:
+    dependency: "direct main"
+    description:
+      name: tflite_flutter
+      sha256: ffb8651fdb116ab0131d6dc47ff73883e0f634ad1ab12bb2852eef1bbeab4a6a
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.10.4"
   typed_data:
     dependency: transitive
     description:
@@ -1029,14 +1013,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
-  xml:
-    dependency: transitive
-    description:
-      name: xml
-      sha256: "971043b3a0d3da28727e40ed3e0b5d18b742fa5a68665cca88e74b7876d5e025"
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.6.1"
   yaml:
     dependency: transitive
     description:

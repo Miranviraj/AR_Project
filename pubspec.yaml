@@ -37,7 +37,7 @@ dependencies:
   ar_flutter_plugin_2: ^0.0.3
   permission_handler: ^11.3.0
   camera: ^0.10.5
-  flutter_tflite: ^1.0.1
+  tflite_flutter: ^0.10.4
   model_viewer_plus: ^1.7.0
   google_generative_ai: ^0.4.7
   flutter_tts: ^3.8.3
