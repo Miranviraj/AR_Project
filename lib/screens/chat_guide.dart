@@ -28,7 +28,7 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
 
   // ⚠️ CHANGE THIS TO YOUR LAPTOP'S IPV4 ADDRESS!
   // If using Android Emulator, use 'http://10.0.2.2:8000/api/chat'
-  static const String _backendUrl = 'http://192.168.1.6:8000/api/chat';
+  static const String _backendUrl = 'http://192.168.1.9:8000/api/chat';
 
   // Voice Engine
   final FlutterTts _flutterTts = FlutterTts();

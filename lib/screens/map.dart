@@ -15,7 +15,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   // ⚠️ CHANGE THIS TO YOUR LAPTOP'S IPV4 ADDRESS!
-  static const String _backendUrl = 'http://192.168.X.X:8000/api/sites';
+  static const String _backendUrl = 'http://192.168.1.9:8000/api/sites';
 
   LatLng? _currentLocation;
   List<dynamic> _heritageSites = [];

@@ -28,7 +28,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   bool _show3DModel = false;
 
   // ⚠️ CHANGE THIS TO YOUR LAPTOP'S IPV4 ADDRESS!
-  static const String _backendUrl = 'http://192.168.1.6:8000/api/detect-ruins';
+  static const String _backendUrl = 'http://192.168.1.9:8000/api/detect-ruins';
 
   // Dynamic 3D Model Mapping
   final Map<String, String> _modelLinks = {
