@@ -5,28 +5,14 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-
       - run: flutter pub get
 
-      # 1. Generate the iOS configuration files securely
-      - name: Generate Podfile
-        run: flutter build ios --config-only --no-codesign
-
-      # 2. Bulletproof method to force iOS 13.0 platform requirement
-      - name: Force Podfile Platform Version
-        run: |
-          echo "platform :ios, '13.0'" > ios/Podfile.temp
-          cat ios/Podfile >> ios/Podfile.temp
-          mv ios/Podfile.temp ios/Podfile
-
-      # 3. Run the actual build
+      # The build command will now use your newly pushed Podfile!
       - run: flutter build ios --release --no-codesign
 
-      # 4. Package and output the IPA
       - name: Package into IPA
         run: |
           mkdir Payload
