@@ -14,7 +14,7 @@ jobs:
 
       # 1. Force Flutter to generate the Podfile without building
       - name: Generate Podfile
-        run: flutter build ios --config-only
+        run: flutter build ios --config-only --no-codesign
 
       # 2. Automatically change the platform version to 13.0
       - name: Fix Podfile Platform Version
