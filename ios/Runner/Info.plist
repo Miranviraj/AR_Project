@@ -53,5 +53,7 @@
     <string>This app needs access to location to identify nearby historical monuments.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>This app needs access to location to identify nearby historical monuments.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>This app requires microphone access to communicate with the AI guide.</string>
 </dict>
 </plist>

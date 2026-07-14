@@ -48,7 +48,8 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   }
 
   Future<void> _initializeCamera() async {
-    _controller = CameraController(widget.camera, ResolutionPreset.high);
+    _controller = CameraController(widget.camera, ResolutionPreset.high ,      enableAudio: true, // <-- Audio is now enabled
+    );
     await _controller!.initialize();
     if (!mounted) return;
     setState(() {});
