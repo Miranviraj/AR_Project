@@ -1,3 +1,4 @@
+import 'package:ar/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart'; // 🌟 Added camera import
 import 'screens/main_navigation.dart';
@@ -47,7 +48,7 @@ class HeritageARApp extends StatelessWidget {
           unselectedItemColor: Colors.white54,
         ),
       ),
-      home: MainNavigationScreen(camera: camera),
+      home: LoginScreen(camera: camera,),
     );
   }
 }

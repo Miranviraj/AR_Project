@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../const/api_config.dart';
+
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -15,7 +17,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   // ⚠️ CHANGE THIS TO YOUR LAPTOP'S IPV4 ADDRESS!
-  static const String _backendUrl = 'http://192.168.1.9:8000/api/sites';
+  static final String _backendUrl = '${ApiConfig().baseUrl}/api/sites';
 
   LatLng? _currentLocation;
   List<dynamic> _heritageSites = [];

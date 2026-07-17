@@ -3,6 +3,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../const/api_config.dart';
+
 class ChatGuideScreen extends StatefulWidget {
   final String recognizedArtifact;
   const ChatGuideScreen({super.key, required this.recognizedArtifact});
@@ -28,7 +30,7 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
 
   // ⚠️ CHANGE THIS TO YOUR LAPTOP'S IPV4 ADDRESS!
   // If using Android Emulator, use 'http://10.0.2.2:8000/api/chat'
-  static const String _backendUrl = 'http://192.168.1.9:8000/api/chat';
+  static final String _backendUrl = '${ApiConfig().baseUrl}/api/chat';
 
   // Voice Engine
   final FlutterTts _flutterTts = FlutterTts();

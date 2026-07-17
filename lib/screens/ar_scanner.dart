@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
+import '../const/api_config.dart';
 import 'chat_guide.dart';
 
 class ScannerCheatScreen extends StatefulWidget {
@@ -28,7 +29,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   bool _show3DModel = false;
 
   // ⚠️ CHANGE THIS TO YOUR LAPTOP'S IPV4 ADDRESS!
-  static const String _backendUrl = 'http://192.168.1.9:8000/api/detect-ruins';
+  static final String _backendUrl = '${ApiConfig().baseUrl}/api/detect-ruins';
 
   // Dynamic 3D Model Mapping
   final Map<String, String> _modelLinks = {
