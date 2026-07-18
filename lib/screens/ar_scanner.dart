@@ -236,20 +236,27 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                           ),
                           icon: const Icon(Icons.view_in_ar, color: Colors.black),
                           label: const Text("Launch True AR", style: TextStyle(color: Colors.black, fontSize: 18)),
-                          onPressed: () {
-                            // Turn off the camera on this screen to free up resources
-                            _controller?.pausePreview();
+                          onPressed: () async {
+                            // 🌟 1. COMPLETELY release the camera hardware so ARCore/ARKit can use it
+                            if (_controller != null) {
+                              await _controller!.dispose();
+                              _controller = null;
+                            }
 
-                            // Navigate to your AR plugin screen
-                            Navigator.push(
+                            if (!context.mounted) return;
+
+                            // 🌟 2. Navigate to your AR plugin screen
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => TrueARScreen(detectedRuin: _recognizedLabel),
                               ),
-                            ).then((_) {
-                              // Restart the camera preview when coming back from AR
-                              _controller?.resumePreview();
-                            });
+                            );
+
+                            // 🌟 3. Restart the camera from scratch when coming back from AR
+                            if (mounted) {
+                              _initializeCamera();
+                            }
                           },
                         ),
 
