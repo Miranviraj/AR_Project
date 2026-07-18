@@ -1,3 +1,4 @@
+import 'package:ar/screens/true_Ar.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
@@ -227,15 +228,29 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                           ),
                         ),
 
-                      if (_isRecognized && !_show3DModel)
+                      if (_isRecognized)
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.greenAccent,
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                           ),
                           icon: const Icon(Icons.view_in_ar, color: Colors.black),
-                          label: const Text("Visualize 3D Model", style: TextStyle(color: Colors.black, fontSize: 18)),
-                          onPressed: () => setState(() => _show3DModel = true),
+                          label: const Text("Launch True AR", style: TextStyle(color: Colors.black, fontSize: 18)),
+                          onPressed: () {
+                            // Turn off the camera on this screen to free up resources
+                            _controller?.pausePreview();
+
+                            // Navigate to your AR plugin screen
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TrueARScreen(detectedRuin: _recognizedLabel),
+                              ),
+                            ).then((_) {
+                              // Restart the camera preview when coming back from AR
+                              _controller?.resumePreview();
+                            });
+                          },
                         ),
 
                       if (_isRecognized)

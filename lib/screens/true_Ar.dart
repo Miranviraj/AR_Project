@@ -6,36 +6,30 @@ import 'package:ar_flutter_plugin_plus/managers/ar_session_manager.dart';
 import 'package:ar_flutter_plugin_plus/models/ar_node.dart';
 import 'package:ar_flutter_plugin_plus/widgets/ar_view.dart';
 import 'package:flutter/material.dart';
-
 import 'package:vector_math/vector_math_64.dart' as math;
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:typed_data';
-
-import '../const/api_config.dart';
 
 class TrueARScreen extends StatefulWidget {
-  const TrueARScreen({super.key});
+  final String detectedRuin; // Passed from ScannerCheatScreen
+
+  const TrueARScreen({super.key, required this.detectedRuin});
 
   @override
   State<TrueARScreen> createState() => _TrueARScreenState();
 }
 
 class _TrueARScreenState extends State<TrueARScreen> {
-  // ⚠️ USE YOUR ACTUAL BACKEND IP
-  final String _backendUrl = '${ApiConfig().baseUrl}/api/detect-ruins';
-
-
-  final Map<String, String> _ruinModels = {
-    'Medirigiriya Vatadage': 'assets/models/royal palace.glb',
-    'Polonnaruwa Vatadage': 'assets/models/royal palace.glb',
-    'Royal palace of King Parakramabahu': 'assets/models/royal palace.glb',
-
-    // Add all your YOLO class names here...
-  };
   ARSessionManager? arSessionManager;
   ARObjectManager? arObjectManager;
-  bool _isAnalyzing = false;
+
+  bool _isPlacing = false;
+
+  // 🌟 Make sure ALL keys here are entirely lowercase to match the lookup logic
+  final Map<String, String> _ruinModels = {
+    'medirigiriya vatadage': 'assets/models/royal_palace.glb',
+    'polonnaruwa vatadage': 'assets/models/royal_palace.glb',
+    'royal palace of king parakramabahu': 'assets/models/royal_palace.glb',
+    // Add all your YOLO class names here in lowercase...
+  };
 
   void onARViewCreated(
       ARSessionManager arSessionManager,
@@ -54,74 +48,60 @@ class _TrueARScreenState extends State<TrueARScreen> {
     this.arObjectManager!.onInitialize();
   }
 
-  Future<void> _scanRuinWithAI() async {
-    if (_isAnalyzing) return;
-    setState(() => _isAnalyzing = true);
+  Future<void> _placeRuinModel() async {
+    if (_isPlacing) return;
+    setState(() => _isPlacing = true);
 
     try {
-      // 1. Capture a snapshot of the current AR view
-      final imageProvider = await arSessionManager!.snapshot();
-      Uint8List imageBytes = await _getImageBytes(imageProvider);
+      // 1. Format the string passed from the scanner to match map keys
+      String aiDetectedName = widget.detectedRuin.toLowerCase();
 
-      // 2. Send to Python YOLO Backend
-      var request = http.MultipartRequest('POST', Uri.parse(_backendUrl));
-      request.files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: 'ar_snapshot.jpg'));
-      var response = await request.send();
-      var responseBody = await response.stream.bytesToString();
-      var data = jsonDecode(responseBody);
+      // 2. Look up the assigned model URI from the map
+      String assignedModelUri = _ruinModels[aiDetectedName] ?? 'assets/models/default_info.glb';
 
-      if (data['detections'].isNotEmpty) {
-        var detection = data['detections'][0];
+      // 3. Get real-world camera position
+      math.Matrix4? cameraPose = await arSessionManager!.getCameraPose();
 
-        // 🌟 2. Extract the class name from the AI detection
-        String aiDetectedName = (detection['artifact_name'] as String).toLowerCase();
+      if (cameraPose != null) {
+        // Position it 2 meters straight ahead and slightly down
+        math.Vector3 localPosition = math.Vector3(0.0, -0.2, -2.0);
+        math.Vector3 worldPosition = cameraPose.transform3(localPosition);
 
-        // 🌟 3. Look up the assigned model URI from the map.
-        // The "??" operator provides a default fallback if the name isn't found.
-        String assignedModelUri = _ruinModels[aiDetectedName] ?? 'assets/models/default_info.glb';
+        var customNode = ARNode(
+          type: NodeType.localGLTF2,
+          uri: assignedModelUri,
+          scale: math.Vector3(0.2, 0.2, 0.2),
+          position: worldPosition,
+          rotation: math.Vector4(1.0, 0.0, 0.0, 0.0),
+        );
 
-        math.Matrix4? cameraPose = await arSessionManager!.getCameraPose();
+        await arObjectManager!.addNode(customNode);
 
-        if (cameraPose != null) {
-          math.Vector3 localPosition = math.Vector3(0.0, -0.2, -2.0);
-          math.Vector3 worldPosition = cameraPose.transform3(localPosition);
-
-          var customNode = ARNode(
-            type: NodeType.localGLTF2,
-            uri: assignedModelUri, // 🌟 4. Pass the dynamic URI right here
-            scale: math.Vector3(0.2, 0.2, 0.2),
-            position: worldPosition,
-            rotation: math.Vector4(1.0, 0.0, 0.0, 0.0),
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Anchored 3D model for ${widget.detectedRuin}!"),
+              backgroundColor: Colors.green,
+            ),
           );
-
-          await arObjectManager!.addNode(customNode);
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Anchored data for ${detection['artifact_name']}!")));
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not determine camera position.")));
-          }
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No ruins found in this frame.")));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Move your phone around slightly to track the environment first."),
+              backgroundColor: Colors.orange,
+            ),
+          );
         }
       }
     } catch (e) {
       print("AR Error: $e");
     } finally {
       if (mounted) {
-        setState(() => _isAnalyzing = false);
+        setState(() => _isPlacing = false);
       }
     }
-  }
-
-  // Placeholder for Image Provider to Bytes conversion
-  Future<Uint8List> _getImageBytes(ImageProvider provider) async {
-    // You will implement conversion logic here based on your snapshot format
-    return Uint8List(0);
   }
 
   @override
@@ -133,6 +113,11 @@ class _TrueARScreenState extends State<TrueARScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text("AR: ${widget.detectedRuin}"),
+        backgroundColor: Colors.black,
+        foregroundColor: const Color(0xFFD4AF37),
+      ),
       body: Stack(
         children: [
           // The Native AR Camera Engine
@@ -151,13 +136,13 @@ class _TrueARScreenState extends State<TrueARScreen> {
                   backgroundColor: const Color(0xFFD4AF37),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 ),
-                onPressed: _isAnalyzing ? null : _scanRuinWithAI,
-                icon: _isAnalyzing
-                    ? const CircularProgressIndicator(color: Colors.black)
-                    : const Icon(Icons.radar, color: Colors.black),
+                onPressed: _isPlacing ? null : _placeRuinModel,
+                icon: _isPlacing
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                    : const Icon(Icons.view_in_ar, color: Colors.black),
                 label: Text(
-                  _isAnalyzing ? "Scanning Geometry..." : "Scan & Anchor",
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                  _isPlacing ? "Anchoring..." : "Place ${widget.detectedRuin} Model",
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
             ),
