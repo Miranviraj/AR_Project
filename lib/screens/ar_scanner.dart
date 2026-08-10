@@ -246,6 +246,10 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                               _controller = null;
                             }
 
+                            // 🌟 1.5 Wait for iOS camera hardware to actually release the session
+                            // ARKit will fail with a 'permission not given' error if the AVCaptureSession is still busy!
+                            await Future.delayed(const Duration(milliseconds: 800));
+
                             if (!context.mounted) return;
 
                             // 🌟 2. Navigate to your AR plugin screen
