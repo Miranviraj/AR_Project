@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http; // 🌟 Web request package
 import 'dart:convert'; // 🌟 For parsing JSON
+import '../widgets/glass_container.dart';
 
 class HomeDiscoveryScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -156,10 +157,20 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Featured Hero Card
             // Featured Hero Card (Local Asset Version)
@@ -209,20 +220,16 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
                   ),
                 );
               },
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Center(
+              child: const GlassContainer(
+                padding: EdgeInsets.all(24),
+                child: Center(
                   child: Column(
                     children: [
                       Icon(Icons.qr_code_scanner, size: 48, color: Color(0xFFD4AF37)),
                       SizedBox(height: 12),
-                      Text('Scan Ruins', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text('Scan Ruins', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                       SizedBox(height: 4),
-                      Text('Point your camera to identify structures', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text('Point your camera to identify structures', style: TextStyle(color: Colors.white70, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -269,6 +276,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
                 lat: site['lat'], // 🌟 PASS LAT
                 lon: site['lon'],
               )).toList(),
+            const SizedBox(height: 80), // Space for bottom nav
           ],
         ),
       ),
@@ -285,61 +293,61 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     required double lat, // 🌟 ADD THIS
     required double lon, // 🌟 ADD THIS
   }) {
-    return Card(
-      color: Theme.of(context).colorScheme.surface,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            imageUrl,
-            width: 60,
-            height: 60,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(width: 60, height: 60, color: Colors.blueGrey[900]),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(0),
+        child: ListTile(
+          contentPadding: const EdgeInsets.all(12),
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              imageUrl,
+              width: 60,
+              height: 60,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(width: 60, height: 60, color: Colors.blueGrey[900]),
+            ),
           ),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(distance, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildTag(tag1),
-                const SizedBox(width: 8),
-                _buildTag(tag2),
-              ],
-            )
-          ],
-        ),
-
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-        // 🌟 ADD THIS NAVIGATION LOGIC:
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RuinDetailsScreen(
-                title: title,
-                imageUrl: imageUrl,
-                distance: distance,
-                lat: lat,
-                lon: lon,
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.location_on, size: 14, color: Colors.white70),
+                  const SizedBox(width: 4),
+                  Text(distance, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
               ),
-            ),
-          );
-        },
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildTag(tag1),
+                  const SizedBox(width: 8),
+                  _buildTag(tag2),
+                ],
+              )
+            ],
+          ),
+          trailing: const Icon(Icons.chevron_right, color: Colors.white70),
+          // 🌟 ADD THIS NAVIGATION LOGIC:
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RuinDetailsScreen(
+                  title: title,
+                  imageUrl: imageUrl,
+                  distance: distance,
+                  lat: lat,
+                  lon: lon,
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
 

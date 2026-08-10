@@ -30,22 +30,23 @@ class HeritageARApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        // 🌟 NEW ANCIENT PALETTE
-        scaffoldBackgroundColor: const Color(0xFF2A2118), // Deep Earth Brown
-        primaryColor: const Color(0xFFD4AF37), // Antique Gold
+        // 🌟 MODERN GLASS PALETTE
+        scaffoldBackgroundColor: Colors.transparent, // Will be overridden by gradient backgrounds
+        primaryColor: const Color(0xFFD4AF37), // Premium Gold Accents
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFD4AF37), // Gold Accents
-          surface: Color(0xFF3A2E24), // Carved Stone/Wood for Cards
-          onSurface: Color(0xFFFDEDD4), // Parchment off-white for text
+          primary: Color(0xFFD4AF37),
+          surface: Color(0x33FFFFFF), // Transparent surface for default cards if any
+          onSurface: Colors.white, 
         ),
-        // 🌟 A classic serif font gives an instant historical/museum feel
-        fontFamily: 'Georgia',
-
-        // Style the navigation bar to match the ancient theme
+        // Modern typography
+        fontFamily: 'Roboto', // Or standard sans-serif
+        
+        // Style the navigation bar to match the sleek theme
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Color(0xFF1C150F), // Very dark earth
-          selectedItemColor: Color(0xFFD4AF37), // Gold
+          backgroundColor: Colors.transparent, // Let glassmorphism show through
+          selectedItemColor: Color(0xFFD4AF37), 
           unselectedItemColor: Colors.white54,
+          elevation: 0,
         ),
       ),
       home: LoginScreen(camera: camera,),

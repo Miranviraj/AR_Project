@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/glass_container.dart';
 
 class ProfilePassportScreen extends StatefulWidget {
   const ProfilePassportScreen({super.key});
@@ -27,16 +28,25 @@ class _ProfilePassportScreenState extends State<ProfilePassportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Explorer Passport', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF3A2E24),
-        elevation: 0,
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF141E30), Color(0xFF243B55)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Explorer Passport', style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Sites Discovered: ${unlockedSites.length}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFD4AF37))),
             const SizedBox(height: 20),
@@ -57,13 +67,11 @@ class _ProfilePassportScreenState extends State<ProfilePassportScreen> {
             ),
 
             // The Physical Reward Tie-in
-            Container(
+            GlassContainer(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3A2E24),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.5)),
-              ),
+              color: Colors.black.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.5)),
               child: const Row(
                 children: [
                   Icon(Icons.card_giftcard, color: Color(0xFFD4AF37), size: 32),
@@ -80,6 +88,7 @@ class _ProfilePassportScreenState extends State<ProfilePassportScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

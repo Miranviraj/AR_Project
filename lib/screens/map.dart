@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../const/api_config.dart';
+import '../widgets/glass_container.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -82,11 +83,13 @@ class _MapScreenState extends State<MapScreen> {
   void _showSiteDetails(Map<String, dynamic> site) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF2A2118),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.transparent, // Transparent for GlassContainer
+      isScrollControlled: true,
       builder: (context) {
-        return Padding(
+        return GlassContainer(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           padding: const EdgeInsets.all(24.0),
+          color: Colors.black.withOpacity(0.4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,6 +110,7 @@ class _MapScreenState extends State<MapScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD4AF37),
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.directions_car, color: Colors.black),
                   label: const Text("Navigate Here", style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
@@ -133,9 +137,12 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Heritage Map'),
-        backgroundColor: const Color(0xFF3A2E24),
+        backgroundColor: Colors.black.withOpacity(0.3),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: FlutterMap(
         options: MapOptions(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'historical_contet.dart';
+import '../widgets/glass_container.dart';
 
 class ARReconstructionScreen extends StatelessWidget {
   const ARReconstructionScreen({super.key});
@@ -41,13 +42,11 @@ class ARReconstructionScreen extends StatelessWidget {
                   children: [
                     const Text('Royal Palace Ruins', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black, blurRadius: 4)])),
                     const SizedBox(height: 4),
-                    Container(
+                    GlassContainer(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD4AF37).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFD4AF37), width: 1),
-                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFFD4AF37).withOpacity(0.2),
+                      border: Border.all(color: const Color(0xFFD4AF37), width: 1),
                       child: const Text('AR LIVE VIEW', style: TextStyle(color: Color(0xFFD4AF37), fontSize: 10, fontWeight: FontWeight.bold)),
                     ),
                   ],
@@ -90,15 +89,11 @@ class ARReconstructionScreen extends StatelessWidget {
             bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
+            child: GlassContainer(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Colors.black.withOpacity(0.9), Colors.transparent],
-                ),
-              ),
+              color: Colors.black.withOpacity(0.3), // A dark tint for the glass
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+              border: Border.all(color: Colors.white12),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -113,13 +108,10 @@ class ARReconstructionScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // Did You Know Card
-                  Container(
+                  GlassContainer(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white24, width: 1),
-                    ),
+                    color: Colors.black.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(16),
                     child: Row(
                       children: [
                         const Expanded(
@@ -194,13 +186,10 @@ class ARReconstructionScreen extends StatelessWidget {
   }
 
   Widget _buildActionCard(BuildContext context, IconData icon, String title, String subtitle, bool isPlayable) {
-    return Container(
+    return GlassContainer(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white24, width: 1),
-      ),
+      color: Colors.white.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(16),
       child: Row(
         children: [
           Icon(icon, color: const Color(0xFFD4AF37), size: 24),

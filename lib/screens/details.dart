@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart'; // 🌟 The Map UI
 import 'package:latlong2/latlong.dart'; // ✅ No space!
+import '../widgets/glass_container.dart';
 
 class RuinDetailsScreen extends StatelessWidget {
   final String title;
@@ -20,14 +21,22 @@ class RuinDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF2A2118), // Deep Earth theme
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 300,
-            pinned: true,
-            backgroundColor: const Color(0xFF1C150F),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF141E30), Color(0xFF243B55)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent, 
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 300,
+              pinned: true,
+              backgroundColor: Colors.transparent, // Let gradient show when pinned
             iconTheme: const IconThemeData(color: Color(0xFFD4AF37)),
             flexibleSpace: FlexibleSpaceBar(
               background: Image.network(imageUrl, fit: BoxFit.cover),
@@ -75,14 +84,12 @@ class RuinDetailsScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // 🌟 THE LIVE INLINE MAP!
-                  Container(
+                  GlassContainer(
                     height: 250, // How tall the map is on the screen
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.5), width: 2),
-                    ),
+                    padding: const EdgeInsets.all(0),
+                    borderRadius: BorderRadius.circular(16),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       child: FlutterMap(
                         options: MapOptions(
                           initialCenter: LatLng(lat, lon), // Center the map on the ruin

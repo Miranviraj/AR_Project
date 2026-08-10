@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/glass_container.dart';
 
 class HistoricalContextPanel extends StatelessWidget {
   const HistoricalContextPanel({super.key});
@@ -11,11 +12,9 @@ class HistoricalContextPanel extends StatelessWidget {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (_, controller) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF3A2E24), // Dark surface color
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
+        return GlassContainer(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          color: Colors.black.withOpacity(0.5),
           child: Column(
             children: [
               // Top Drag Indicator and App Bar

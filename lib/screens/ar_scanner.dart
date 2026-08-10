@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'dart:io';
 import '../const/api_config.dart';
 import 'chat_guide.dart';
+import '../widgets/glass_container.dart';
 
 class ScannerCheatScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -191,9 +192,11 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
+                GlassContainer(
                   padding: const EdgeInsets.all(16),
-                  color: Colors.black54,
+                  color: Colors.black.withOpacity(0.3),
+                  borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

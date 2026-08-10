@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../const/api_config.dart';
+import '../widgets/glass_container.dart';
 
 class ChatGuideScreen extends StatefulWidget {
   final String recognizedArtifact;
@@ -157,11 +158,20 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF2A2118),
-      appBar: AppBar(
-        title: const Text('Digital Guide', style: TextStyle(fontSize: 16)),
-        backgroundColor: const Color(0xFF3A2E24),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF141E30), Color(0xFF243B55)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Digital Guide', style: TextStyle(fontSize: 16)),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         actions: [
           DropdownButton<String>(
             value: _selectedLanguage,
@@ -239,14 +249,13 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
               child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
             ),
 
-          Container(
+          GlassContainer(
             padding: const EdgeInsets.all(12).copyWith(
                 bottom: MediaQuery.of(context).padding.bottom + 12
             ),
-            decoration: const BoxDecoration(
-              color: Color(0xFF3A2E24),
-              border: Border(top: BorderSide(color: Colors.white12)),
-            ),
+            borderRadius: BorderRadius.zero,
+            color: Colors.black.withOpacity(0.3),
+            border: const Border(top: BorderSide(color: Colors.white12)),
             child: Row(
               children: [
                 Expanded(
@@ -283,6 +292,7 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
           )
         ],
       ),
+    ),
     );
   }
 }

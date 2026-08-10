@@ -7,6 +7,7 @@ import 'package:ar_flutter_plugin_plus/models/ar_node.dart';
 import 'package:ar_flutter_plugin_plus/widgets/ar_view.dart';
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as math;
+import '../widgets/glass_container.dart';
 
 class TrueARScreen extends StatefulWidget {
   final String detectedRuin; // Passed from ScannerCheatScreen
@@ -113,9 +114,11 @@ class _TrueARScreenState extends State<TrueARScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text("AR: ${widget.detectedRuin}"),
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.black.withOpacity(0.3), // Glassy dark top
+        elevation: 0,
         foregroundColor: const Color(0xFFD4AF37),
       ),
       body: Stack(
@@ -131,18 +134,25 @@ class _TrueARScreenState extends State<TrueARScreen> {
             left: 0,
             right: 0,
             child: Center(
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD4AF37),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                ),
-                onPressed: _isPlacing ? null : _placeRuinModel,
-                icon: _isPlacing
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                    : const Icon(Icons.view_in_ar, color: Colors.black),
-                label: Text(
-                  _isPlacing ? "Anchoring..." : "Place ${widget.detectedRuin} Model",
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
+              child: GlassContainer(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                borderRadius: BorderRadius.circular(30),
+                color: Colors.black.withOpacity(0.5),
+                child: InkWell(
+                  onTap: _isPlacing ? null : _placeRuinModel,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _isPlacing
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFFD4AF37), strokeWidth: 2))
+                          : const Icon(Icons.view_in_ar, color: Color(0xFFD4AF37)),
+                      const SizedBox(width: 12),
+                      Text(
+                        _isPlacing ? "Anchoring..." : "Place ${widget.detectedRuin} Model",
+                        style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
