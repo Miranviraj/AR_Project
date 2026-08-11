@@ -127,6 +127,7 @@ class RuinDetailsScreen extends StatelessWidget {
           )
         ],
       ),
+      ),
     );
   }
 }

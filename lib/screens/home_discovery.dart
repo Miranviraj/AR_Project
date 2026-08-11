@@ -280,6 +280,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
