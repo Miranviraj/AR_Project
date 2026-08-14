@@ -12,14 +12,19 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Build iOS App (Direct)
+      - name: Build iOS App (Ignore Errors)
         run: |
-          # build ios directly outputs to the iphoneos folder
+          # මේකෙන් app එක build කරනවා. || true තියෙන නිසා error ආවත් build එක නවතින්නේ නැහැ
           flutter build ios --release --no-codesign || true
 
-      - name: Upload App Folder
+      - name: Vacuum and Find Runner.app
+        run: |
+          mkdir -p Upload_Folder
+          # සම්පූර්ණ මැෂින් එකේම search කරලා Runner.app එක හොයාගෙන Upload_Folder එකට දානවා
+          find . -type d -name "Runner.app" -exec cp -R {} Upload_Folder/ \;
+
+      - name: Upload to Windows PC
         uses: actions/upload-artifact@v4
         with:
-          name: Runner-App-Folder
-          # This grabs the entire folder containing your app
-          path: build/ios/iphoneos/
+          name: Ancient-Ceylon-App-Files
+          path: Upload_Folder/
