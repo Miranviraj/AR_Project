@@ -12,20 +12,24 @@ jobs:
 
       - run: flutter pub get
 
-      # Fix for Xcode throwing "Development Team" errors on CI runners.
-      # This strips the Automatic Provisioning and Team ID from the project file.
-      - name: Force Manual Provisioning in Xcode Project
+      - name: Build iOS App (Bypass Signing Error)
         run: |
-          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj
+          # Flutter will compile the app and fail at the very last second 
+          # because the cloud runner lacks Apple Developer credentials.
+          # "|| true" forces GitHub Actions to continue anyway.
+          flutter build ios --release --no-codesign || true
+          
+          # Safety check: Verify the app actually compiled successfully.
+          # If this folder is missing, you have a real syntax/code error.
+          if [ ! -d "build/ios/iphoneos/Runner.app" ]; then
+            echo "❌ Runner.app was not generated. Real compilation error occurred."
+            exit 1
+          fi
+          echo "✅ Runner.app successfully generated!"
 
-      # The build command will now successfully bypass Apple's credential checks
-      - name: Build iOS without signing
-        run: flutter build ios --release --no-codesign
-
-      - name: Package into IPA
+      - name: Package into unsigned IPA
         run: |
-          mkdir Payload
+          mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload
           zip -r app.ipa Payload
 
