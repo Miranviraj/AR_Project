@@ -14,16 +14,15 @@ jobs:
 
       - name: Build iOS Archive (Unsigned)
         run: |
-          # By using "ipa" instead of "ios", Flutter creates a full .xcarchive.
-          # This forces Xcode to embed all 15MB+ of your frameworks and assets,
-          # and the --no-codesign flag tells it to safely stop before signing!
-          flutter build ipa --release --no-codesign
+          # Flutter successfully builds the archive, but throws exit 1 at the end 
+          # during signature validation. "|| true" forces the workflow to continue.
+          flutter build ipa --release --no-codesign || true
 
       - name: Package into unsigned IPA
         run: |
           mkdir -p Payload
           
-          # The fully assembled app lives inside the generated archive directory
+          # The fully assembled 15MB+ app lives inside the generated archive directory
           APP_PATH="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
           
           if [ ! -d "$APP_PATH" ]; then
