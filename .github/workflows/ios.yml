@@ -12,25 +12,41 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Build iOS Archive (Unsigned)
+      - name: Force Manual Provisioning
         run: |
-          # Flutter successfully builds the archive, but throws exit 1 at the end 
-          # during signature validation. "|| true" forces the workflow to continue.
-          flutter build ipa --release --no-codesign || true
+          # Prevents Xcode from crashing early while looking for Dev Accounts
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj
 
-      - name: Package into unsigned IPA
+      - name: Build iOS App (Unsigned)
+        run: |
+          # We use "ios" instead of "ipa" because it's faster and doesn't run the strict export phase.
+          # || true forces GitHub Actions to ignore the final code-signing crash.
+          flutter build ios --release --no-codesign || true
+
+      - name: Hunt and Package IPA
         run: |
           mkdir -p Payload
           
-          # The fully assembled 15MB+ app lives inside the generated archive directory
-          APP_PATH="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
+          echo "Hunting for Runner.app with embedded frameworks..."
+          APP_PATH=""
           
-          if [ ! -d "$APP_PATH" ]; then
-            echo "❌ Runner.app was not found in the archive. Compilation failed."
-            exit 1
+          # Dynamically find ALL Runner.app folders in the build directory
+          while IFS= read -r path; do
+            # Check if it has the heavy Flutter Frameworks inside (proves it's the 15MB+ app)
+            if [ -d "$path/Frameworks" ]; then
+              APP_PATH="$path"
+              break
+            fi
+          done < <(find build/ios -type d -name "Runner.app")
+
+          if [ -z "$APP_PATH" ]; then
+             echo "❌ No fully assembled Runner.app found. Listing what was actually generated:"
+             find build/ios -type d -name "Runner.app" -exec du -sh {} \;
+             exit 1
           fi
-          
-          echo "✅ Found fully assembled Runner.app!"
+
+          echo "✅ Found full Runner.app at: $APP_PATH"
           cp -r "$APP_PATH" Payload/
           zip -q -r app.ipa Payload
 
