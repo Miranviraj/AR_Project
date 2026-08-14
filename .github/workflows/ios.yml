@@ -12,34 +12,30 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Force Disable Apple Code Signing
+      - name: Switch Xcode to Manual Provisioning
         run: |
-          # Inject build settings directly into Flutter's iOS config.
-          # This forces Xcode to skip the signing phase entirely.
-          echo "CODE_SIGNING_ALLOWED = NO" >> ios/Flutter/Release.xcconfig
-          echo "CODE_SIGNING_REQUIRED = NO" >> ios/Flutter/Release.xcconfig
-          echo "EXPANDED_CODE_SIGN_IDENTITY = \"\"" >> ios/Flutter/Release.xcconfig
+          # This prevents Xcode from crashing while looking for a Developer Account,
+          # but DOES NOT break the framework embedding phase (fixes the 14kb bug).
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj
 
       - name: Build iOS App
         run: |
-          # We keep the "|| true" safety net just in case Xcode 
-          # still throws a non-fatal warning exit code.
+          # We still use || true just in case xcodebuild throws a non-fatal warning exit code at the very end
           flutter build ios --release --no-codesign || true
 
       - name: Package into unsigned IPA
         run: |
           mkdir -p Payload
           
-          # Dynamically search the build folder for the compiled Runner.app 
-          # instead of hardcoding a path that Flutter might abandon.
-          APP_PATH=$(find build/ios -type d -name "Runner.app" | head -n 1)
+          APP_PATH="build/ios/iphoneos/Runner.app"
           
-          if [ -z "$APP_PATH" ]; then
-            echo "❌ Runner.app was not found anywhere. Real compilation error occurred."
+          if [ ! -d "$APP_PATH" ]; then
+            echo "❌ Runner.app was not found. Compilation failed."
             exit 1
           fi
           
-          echo "✅ Found Runner.app at $APP_PATH"
+          echo "✅ Found Runner.app! Packaging full payload..."
           cp -r "$APP_PATH" Payload/
           zip -q -r app.ipa Payload
 
