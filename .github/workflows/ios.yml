@@ -12,30 +12,26 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Switch Xcode to Manual Provisioning
+      - name: Build iOS Archive (Unsigned)
         run: |
-          # This prevents Xcode from crashing while looking for a Developer Account,
-          # but DOES NOT break the framework embedding phase (fixes the 14kb bug).
-          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj
-
-      - name: Build iOS App
-        run: |
-          # We still use || true just in case xcodebuild throws a non-fatal warning exit code at the very end
-          flutter build ios --release --no-codesign || true
+          # By using "ipa" instead of "ios", Flutter creates a full .xcarchive.
+          # This forces Xcode to embed all 15MB+ of your frameworks and assets,
+          # and the --no-codesign flag tells it to safely stop before signing!
+          flutter build ipa --release --no-codesign
 
       - name: Package into unsigned IPA
         run: |
           mkdir -p Payload
           
-          APP_PATH="build/ios/iphoneos/Runner.app"
+          # The fully assembled app lives inside the generated archive directory
+          APP_PATH="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
           
           if [ ! -d "$APP_PATH" ]; then
-            echo "❌ Runner.app was not found. Compilation failed."
+            echo "❌ Runner.app was not found in the archive. Compilation failed."
             exit 1
           fi
           
-          echo "✅ Found Runner.app! Packaging full payload..."
+          echo "✅ Found fully assembled Runner.app!"
           cp -r "$APP_PATH" Payload/
           zip -q -r app.ipa Payload
 
