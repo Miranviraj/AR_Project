@@ -12,26 +12,36 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Build iOS App (Bypass Signing Error)
+      - name: Force Disable Apple Code Signing
         run: |
-          # Flutter will compile the app and fail at the very last second 
-          # because the cloud runner lacks Apple Developer credentials.
-          # "|| true" forces GitHub Actions to continue anyway.
+          # Inject build settings directly into Flutter's iOS config.
+          # This forces Xcode to skip the signing phase entirely.
+          echo "CODE_SIGNING_ALLOWED = NO" >> ios/Flutter/Release.xcconfig
+          echo "CODE_SIGNING_REQUIRED = NO" >> ios/Flutter/Release.xcconfig
+          echo "EXPANDED_CODE_SIGN_IDENTITY = \"\"" >> ios/Flutter/Release.xcconfig
+
+      - name: Build iOS App
+        run: |
+          # We keep the "|| true" safety net just in case Xcode 
+          # still throws a non-fatal warning exit code.
           flutter build ios --release --no-codesign || true
-          
-          # Safety check: Verify the app actually compiled successfully.
-          # If this folder is missing, you have a real syntax/code error.
-          if [ ! -d "build/ios/iphoneos/Runner.app" ]; then
-            echo "❌ Runner.app was not generated. Real compilation error occurred."
-            exit 1
-          fi
-          echo "✅ Runner.app successfully generated!"
 
       - name: Package into unsigned IPA
         run: |
           mkdir -p Payload
-          cp -r build/ios/iphoneos/Runner.app Payload
-          zip -r app.ipa Payload
+          
+          # Dynamically search the build folder for the compiled Runner.app 
+          # instead of hardcoding a path that Flutter might abandon.
+          APP_PATH=$(find build/ios -type d -name "Runner.app" | head -n 1)
+          
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ Runner.app was not found anywhere. Real compilation error occurred."
+            exit 1
+          fi
+          
+          echo "✅ Found Runner.app at $APP_PATH"
+          cp -r "$APP_PATH" Payload/
+          zip -q -r app.ipa Payload
 
       - uses: actions/upload-artifact@v4
         with:
