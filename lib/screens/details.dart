@@ -81,8 +81,34 @@ class RuinDetailsScreen extends StatelessWidget {
                     "Site Location",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
-                  const SizedBox(height: 12),
+                 
 
+const SizedBox(height: 20),
+ElevatedButton.icon(
+  icon: const Icon(Icons.explore, color: Colors.white),
+  label: const Text(
+    "Open Live Navigation Map",
+    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+  ),
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.orange, // Strict orange theme applied
+    minimumSize: const Size(double.infinity, 50),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+  ),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HeritageExplorerMapScreen(
+          targetLat: lat,
+          targetLon: lon,
+        ),
+      ),
+    );
+  },
+),
                   // 🌟 THE LIVE INLINE MAP!
                   GlassContainer(
                     height: 250, // How tall the map is on the screen

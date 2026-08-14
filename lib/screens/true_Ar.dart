@@ -1,3 +1,4 @@
+import 'dart:io' show Platform; // 🌟 Required to check iOS vs Android
 import 'package:ar_flutter_plugin_plus/datatypes/node_types.dart';
 import 'package:ar_flutter_plugin_plus/managers/ar_anchor_manager.dart';
 import 'package:ar_flutter_plugin_plus/managers/ar_location_manager.dart';
@@ -24,13 +25,26 @@ class _TrueARScreenState extends State<TrueARScreen> {
 
   bool _isPlacing = false;
 
-  // 🌟 Make sure ALL keys here are entirely lowercase to match the lookup logic
-  final Map<String, String> _ruinModels = {
-    'medirigiriya vatadage': 'assets/models/royal_palace.glb',
-    'polonnaruwa vatadage': 'assets/models/royal_palace.glb',
-    'royal palace of king parakramabahu': 'assets/models/royal_palace.glb',
-    // Add all your YOLO class names here in lowercase...
+  // 🌟 Map now only stores the BASE filename without the extension
+  final Map<String, String> _ruinModelBaseNames = {
+    'medirigiriya vatadage': 'royal_palace',
+    'polonnaruwa vatadage': 'royal_palace',
+    'royal palace of king parakramabahu': 'royal_palace',
+    // Add all your YOLO class names here in lowercase mapping to their file base name
   };
+
+  // 🌟 Dynamic platform branching logic
+  String _getCorrect3DModelPath(String aiDetectedName) {
+    String baseName = _ruinModelBaseNames[aiDetectedName] ?? 'default_info';
+
+    if (Platform.isIOS) {
+      // iOS Apple ARKit requirement
+      return "assets/models/$baseName.usdz";
+    } else {
+      // Android ARCore requirement
+      return "assets/models/$baseName.glb";
+    }
+  }
 
   void onARViewCreated(
       ARSessionManager arSessionManager,
@@ -42,7 +56,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
 
     this.arSessionManager!.onInitialize(
       showFeaturePoints: false,
-      showPlanes: true, // Shows dots on the ground/walls so you know AR is tracking
+      showPlanes: true,
       customPlaneTexturePath: "Images/triangle.png",
       showWorldOrigin: false,
     );
@@ -57,8 +71,8 @@ class _TrueARScreenState extends State<TrueARScreen> {
       // 1. Format the string passed from the scanner to match map keys
       String aiDetectedName = widget.detectedRuin.toLowerCase();
 
-      // 2. Look up the assigned model URI from the map
-      String assignedModelUri = _ruinModels[aiDetectedName] ?? 'assets/models/default_info.glb';
+      // 2. Look up the assigned model URI dynamically based on iOS vs Android
+      String assignedModelUri = _getCorrect3DModelPath(aiDetectedName);
 
       // 3. Get real-world camera position
       math.Matrix4? cameraPose = await arSessionManager!.getCameraPose();
@@ -82,7 +96,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Anchored 3D model for ${widget.detectedRuin}!"),
-              backgroundColor: Colors.green,
+              backgroundColor: Colors.orange, // Strict orange theme constraint applied
             ),
           );
         }
@@ -91,13 +105,13 @@ class _TrueARScreenState extends State<TrueARScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Move your phone around slightly to track the environment first."),
-              backgroundColor: Colors.orange,
+              backgroundColor: Colors.orange, // Strict orange theme constraint applied
             ),
           );
         }
       }
     } catch (e) {
-      print("AR Error: $e");
+      debugPrint("AR Error: $e");
     } finally {
       if (mounted) {
         setState(() => _isPlacing = false);
@@ -117,9 +131,9 @@ class _TrueARScreenState extends State<TrueARScreen> {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text("AR: ${widget.detectedRuin}"),
-        backgroundColor: Colors.black.withOpacity(0.3), // Glassy dark top
+        backgroundColor: Colors.black.withOpacity(0.3),
         elevation: 0,
-        foregroundColor: const Color(0xFFD4AF37),
+        foregroundColor: Colors.orange, // Strict orange theme constraint applied
       ),
       body: Stack(
         children: [
@@ -144,12 +158,16 @@ class _TrueARScreenState extends State<TrueARScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _isPlacing
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFFD4AF37), strokeWidth: 2))
-                          : const Icon(Icons.view_in_ar, color: Color(0xFFD4AF37)),
+                          ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.orange, strokeWidth: 2)
+                      )
+                          : const Icon(Icons.view_in_ar, color: Colors.orange), // Strict orange theme constraint applied
                       const SizedBox(width: 12),
                       Text(
                         _isPlacing ? "Anchoring..." : "Place ${widget.detectedRuin} Model",
-                        style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 16), // Strict orange theme constraint applied
                       ),
                     ],
                   ),
