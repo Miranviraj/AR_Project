@@ -1,3 +1,4 @@
+import 'package:ar/screens/chat_guide.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart'; // 🌟 The Map UI
 import 'package:latlong2/latlong.dart'; // ✅ No space!
@@ -98,15 +99,15 @@ ElevatedButton.icon(
     ),
   ),
   onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => HeritageExplorerMapScreen(
-          targetLat: lat,
-          targetLon: lon,
-        ),
-      ),
-    );
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => ChatGuideScreen(
+    //       targetLat: lat,
+    //       targetLon: lon,
+    //     ),
+    //   ),
+    // );
   },
 ),
                   // 🌟 THE LIVE INLINE MAP!

@@ -5,13 +5,23 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+
       - run: flutter pub get
 
-      # The build command will now use your newly pushed Podfile!
-      - run: flutter build ios --release --no-codesign
+      # Fix for Xcode throwing "Development Team" errors on CI runners.
+      # This strips the Automatic Provisioning and Team ID from the project file.
+      - name: Force Manual Provisioning in Xcode Project
+        run: |
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' ios/Runner.xcodeproj/project.pbxproj
+
+      # The build command will now successfully bypass Apple's credential checks
+      - name: Build iOS without signing
+        run: flutter build ios --release --no-codesign
 
       - name: Package into IPA
         run: |
