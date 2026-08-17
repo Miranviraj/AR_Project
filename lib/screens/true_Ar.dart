@@ -27,8 +27,8 @@ class _TrueARScreenState extends State<TrueARScreen> {
 
   // 🌟 Map now only stores the BASE filename without the extension
   final Map<String, String> _ruinModelBaseNames = {
-    'medirigiriya vatadage': 'royal_palace',
-    'polonnaruwa vatadage': 'royal_palace',
+    'medirigiriya vatadage': 'medirigiriya_watadageya',
+    'polonnaruwa vatadage': 'medirigiriya_watadageya',
     'royal palace of king parakramabahu': 'royal_palace',
     // Add all your YOLO class names here in lowercase mapping to their file base name
   };

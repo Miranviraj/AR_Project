@@ -14,21 +14,17 @@ jobs:
 
       - name: Build iOS App (Ignore Errors)
         run: |
-          # Code signing error ආවත් build එක දිගටම යන්න දෙනවා
           flutter build ios --release --no-codesign || true
 
       - name: Find and Package the REAL App
         run: |
           mkdir -p Upload_Folder
           
-          # මැෂින් එකේ තියෙන හැම Runner.app එකක්ම හොයනවා
           find build -type d -name "Runner.app" | while read app_path; do
-            # ෆෝල්ඩර් එකේ සයිස් එක Megabytes (MB) වලින් බලනවා
             size_mb=$(du -sm "$app_path" | awk '{print $1}')
           
-            # ෆයිල් සයිස් එක 5MB වලට වඩා වැඩිනම් විතරක් ඒක අපේ Upload_Folder එකට දානවා (10KB ඒවා මඟහරිනවා)
             if [ "$size_mb" -gt 5 ]; then
-              echo "✅ නියම ඇප් එක හොයාගත්තා: $app_path ($size_mb MB)"
+              echo "✅ Found the real app: $app_path ($size_mb MB)"
               cp -R "$app_path" Upload_Folder/
             fi
           done

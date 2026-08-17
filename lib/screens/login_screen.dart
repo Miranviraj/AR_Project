@@ -97,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.account_balance, size: 80, color: Color(0xFFD4AF37)),
+                  Image.asset("assets/icon.png"),
                   const SizedBox(height: 20),
                   const Text("Ancient Ceylon AR", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
                   const SizedBox(height: 40),

@@ -77,7 +77,6 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     super.dispose();
   }
 
-  // 🌟 Auto-greet the user based on what they scanned
   void _sendInitialGreeting() {
     setState(() {
       _messages.add({
@@ -88,7 +87,6 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     _speak('Welcome! I see you are exploring the ${widget.recognizedArtifact}. What would you like to know about it?');
   }
 
-  // 🌟 Talk directly to your custom Python Backend!
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
@@ -103,7 +101,6 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     _textController.clear();
 
     try {
-      // We invisibly add the artifact name to the user's prompt so the AI has context!
       String contextPrompt = "Regarding the ${widget.recognizedArtifact}: $text";
 
       final response = await http.post(
@@ -161,7 +158,7 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF141E30), Color(0xFF243B55)],
+          colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -172,127 +169,142 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
           title: const Text('Digital Guide', style: TextStyle(fontSize: 16)),
           backgroundColor: Colors.transparent,
           elevation: 0,
-        actions: [
-          DropdownButton<String>(
-            value: _selectedLanguage,
-            dropdownColor: const Color(0xFF3A2E24),
-            style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold),
-            underline: const SizedBox(),
-            icon: const Icon(Icons.language, color: Color(0xFFD4AF37)),
-            items: _ttsLanguages.keys.map((String lang) {
-              return DropdownMenuItem(value: lang, child: Text(lang));
-            }).toList(),
-            onChanged: (String? newValue) {
-              if (newValue != null) {
-                setState(() {
-                  _selectedLanguage = newValue;
-                  _flutterTts.setLanguage(_ttsLanguages[newValue]!);
-                });
-              }
-            },
-          ),
-          IconButton(
-            icon: Icon(_isSpeaking ? Icons.volume_up : Icons.volume_off, color: const Color(0xFFD4AF37)),
-            onPressed: () => _isSpeaking ? _stopSpeaking() : null,
-          )
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final isUser = _messages[index]['role'] == 'user';
-                return Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.8,
-                    ),
-                    decoration: BoxDecoration(
-                        color: isUser ? const Color(0xFFD4AF37) : const Color(0xFF3A2E24),
-                        borderRadius: BorderRadius.circular(16).copyWith(
-                          bottomRight: isUser ? const Radius.circular(0) : null,
-                          bottomLeft: !isUser ? const Radius.circular(0) : null,
-                        ),
-                        border: isUser ? null : Border.all(color: const Color(0xFFD4AF37).withOpacity(0.3)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                    ),
-                    child: Text(
-                        _messages[index]['text'],
-                        style: TextStyle(
-                          color: isUser ? const Color(0xFF2A2118) : const Color(0xFFFDEDD4),
-                          fontSize: 15,
-                          height: 1.4,
-                        )
-                    ),
-                  ),
-                );
+          actions: [
+            DropdownButton<String>(
+              value: _selectedLanguage,
+              dropdownColor: const Color(0xFF3A2E24),
+              style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+              underline: const SizedBox(),
+              icon: const Icon(Icons.language, color: Colors.orange),
+              items: _ttsLanguages.keys.map((String lang) {
+                return DropdownMenuItem(value: lang, child: Text(lang));
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedLanguage = newValue;
+                    _flutterTts.setLanguage(_ttsLanguages[newValue]!);
+                  });
+                }
               },
             ),
-          ),
+            IconButton(
+              icon: Icon(_isSpeaking ? Icons.volume_up : Icons.volume_off, color: Colors.orange),
+              onPressed: () => _isSpeaking ? _stopSpeaking() : null,
+            )
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final isUser = _messages[index]['role'] == 'user';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // 🌟 INJECT YOUR CUSTOM SKETCH HERE
+                        if (!isUser) ...[
+                          const CircleAvatar(
+                            radius: 18,
+                            backgroundImage: AssetImage('assets/guide_portrait.jpg'),
+                            backgroundColor: Colors.transparent,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
 
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(color: Color(0xFFD4AF37)),
-            ),
-
-          GlassContainer(
-            padding: const EdgeInsets.all(12).copyWith(
-                bottom: MediaQuery.of(context).padding.bottom + 12
-            ),
-            borderRadius: BorderRadius.zero,
-            color: Colors.black.withOpacity(0.3),
-            border: const Border(top: BorderSide(color: Colors.white12)),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Ask about the ruins...',
-                      hintStyle: const TextStyle(color: Colors.white38),
-                      filled: true,
-                      fillColor: const Color(0xFF2A2118),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        // Chat Bubble
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                                color: isUser ? Colors.orange : const Color(0xFF3A2E24),
+                                borderRadius: BorderRadius.circular(16).copyWith(
+                                  bottomRight: isUser ? const Radius.circular(0) : null,
+                                  bottomLeft: !isUser ? const Radius.circular(0) : null,
+                                ),
+                                border: isUser ? null : Border.all(color: Colors.orange.withOpacity(0.3)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  )
+                                ]
+                            ),
+                            child: Text(
+                                _messages[index]['text'],
+                                style: TextStyle(
+                                  color: isUser ? const Color(0xFF2A2118) : const Color(0xFFFDEDD4),
+                                  fontSize: 15,
+                                  height: 1.4,
+                                )
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    onSubmitted: (value) => _sendMessage(value),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFD4AF37),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.send, color: Colors.black),
-                    onPressed: () => _sendMessage(_textController.text),
-                  ),
-                )
-              ],
+                  );
+                },
+              ),
             ),
-          )
-        ],
+
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(color: Colors.orange),
+              ),
+
+            GlassContainer(
+              padding: const EdgeInsets.all(12).copyWith(
+                  bottom: MediaQuery.of(context).padding.bottom + 12
+              ),
+              borderRadius: BorderRadius.zero,
+              color: Colors.black.withOpacity(0.3),
+              border: const Border(top: BorderSide(color: Colors.white12)),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _textController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Ask about the ruins...',
+                        hintStyle: const TextStyle(color: Colors.white38),
+                        filled: true,
+                        fillColor: const Color(0xFF2A2118),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      ),
+                      onSubmitted: (value) => _sendMessage(value),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.orange,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.send, color: Colors.black87),
+                      onPressed: () => _sendMessage(_textController.text),
+                    ),
+                  )
+                ],
+              ),
+            )
+          ],
+        ),
       ),
-    ),
     );
   }
 }
