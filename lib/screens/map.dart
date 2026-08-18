@@ -27,10 +27,8 @@ class _HeritageExplorerMapScreenState extends State<HeritageExplorerMapScreen> {
   String _activeSiteName = "Select a site to route";
   bool _isLoading = true;
 
-  // Dynamic search radius state (5.0 km to 100.0 km)
   double _searchRadiusKm = 50.0;
 
-  // Replace with your active Google Cloud Server IP
   final String serverIp = '${ApiConfig().baseUrl}';
 
   @override
@@ -53,10 +51,8 @@ class _HeritageExplorerMapScreenState extends State<HeritageExplorerMapScreen> {
         _userLocation = userLatLng;
       });
 
-      // 1. Fetch nearby sites from custom Python backend
       await _fetchBackendNearbySites(position.latitude, position.longitude);
 
-      // 2. If opened from detail screen, draw initial route
       if (widget.targetLat != null && widget.targetLon != null) {
         _calculateAndDrawRoute(LatLng(widget.targetLat!, widget.targetLon!), "Selected Ruin");
       }
@@ -121,7 +117,7 @@ class _HeritageExplorerMapScreenState extends State<HeritageExplorerMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Backend Map Explorer', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+        title: const Text(' Map Explorer', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF141E30),
         iconTheme: const IconThemeData(color: Colors.orange),
       ),
@@ -142,7 +138,6 @@ class _HeritageExplorerMapScreenState extends State<HeritageExplorerMapScreen> {
               ),
               PolylineLayer(
                 polylines: [
-                  // 🌟 FIX: Only render the polyline if we actually have route points
                   if (_routePoints.isNotEmpty)
                     Polyline(
                       points: _routePoints,
@@ -160,17 +155,67 @@ class _HeritageExplorerMapScreenState extends State<HeritageExplorerMapScreen> {
                     height: 50,
                     child: const Icon(Icons.my_location, color: Colors.blueAccent, size: 35),
                   ),
-                  // Dynamic Markers from Backend
+
+                  // 🌟 FIX 1 & 2: Safely cast to double and increase dimensions to prevent overflow!
                   ..._monuments.map((site) => Marker(
-                    point: LatLng(site['lat'], site['lon']),
-                    width: 50,
-                    height: 50,
+                    point: LatLng(
+                        (site['lat'] as num).toDouble(),
+                        (site['lon'] as num).toDouble()
+                    ),
+                    width: 80,
+                    height: 90,
+                    alignment: Alignment.topCenter,
                     child: GestureDetector(
                       onTap: () => _calculateAndDrawRoute(
-                          LatLng(site['lat'], site['lon']),
+                          LatLng(
+                              (site['lat'] as num).toDouble(),
+                              (site['lon'] as num).toDouble()
+                          ),
                           site['name']
                       ),
-                      child: const Icon(Icons.location_on, color: Colors.orange, size: 40),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 45,
+                            height: 45,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.orange, width: 2.5),
+                              color: const Color(0xFF141E30),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: site['image_url'] != null && site['image_url'].toString().isNotEmpty
+                                  ? Image.network(
+                                site['image_url'],
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Padding(
+                                    padding: EdgeInsets.all(10.0),
+                                    child: CircularProgressIndicator(color: Colors.orange, strokeWidth: 2),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.account_balance, color: Colors.orange, size: 20);
+                                },
+                              )
+                                  : const Icon(Icons.account_balance, color: Colors.orange, size: 20),
+                            ),
+                          ),
+                          Transform.translate(
+                            offset: const Offset(0, -6),
+                            child: const Icon(Icons.arrow_drop_down, color: Colors.orange, size: 30),
+                          ),
+                        ],
+                      ),
                     ),
                   )).toList(),
                 ],
@@ -237,8 +282,8 @@ class _HeritageExplorerMapScreenState extends State<HeritageExplorerMapScreen> {
                     child: Slider(
                       value: _searchRadiusKm,
                       min: 5.0,
-                      max: 100.0,
-                      divisions: 95,
+                      max: 300.0,
+                      divisions: 295,
                       label: "${_searchRadiusKm.toInt()} km",
                       onChanged: (newValue) {
                         setState(() {
@@ -259,7 +304,7 @@ class _HeritageExplorerMapScreenState extends State<HeritageExplorerMapScreen> {
 
           // Information overlay (Bottom)
           Positioned(
-            bottom: 30,
+            bottom: 100,
             left: 20,
             right: 20,
             child: Container(
@@ -286,7 +331,7 @@ class _HeritageExplorerMapScreenState extends State<HeritageExplorerMapScreen> {
               ),
             ),
           ),
-        ],
+        ], // 🌟 FIX 3: Cleaned up the stray brackets at the bottom
       ),
     );
   }

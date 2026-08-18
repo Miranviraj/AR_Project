@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 import '../widgets/glass_container.dart';
 import 'map.dart';
 
@@ -12,6 +10,7 @@ class RuinDetailsScreen extends StatefulWidget {
   final String imageUrl;
   final double lat;
   final double lon;
+  final String description; // 🌟 Accept the database description directly
 
   const RuinDetailsScreen({
     super.key,
@@ -19,6 +18,7 @@ class RuinDetailsScreen extends StatefulWidget {
     required this.imageUrl,
     required this.lat,
     required this.lon,
+    required this.description,
   });
 
   @override
@@ -27,41 +27,11 @@ class RuinDetailsScreen extends StatefulWidget {
 
 class _RuinDetailsScreenState extends State<RuinDetailsScreen> {
   String liveDistance = "Calculating real distance...";
-  String realDescription = "Fetching historical archives...";
-  bool isLoadingDescription = true;
 
   @override
   void initState() {
     super.initState();
     _calculateRealDistance();
-    _fetchHistoricalData();
-  }
-
-  Future<void> _fetchHistoricalData() async {
-    try {
-      final formattedTitle = Uri.encodeComponent(widget.title);
-      final url = Uri.parse('https://en.wikipedia.org/api/rest_v1/page/summary/$formattedTitle');
-
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          realDescription = data['extract'] ?? "Historical data is currently unavailable for this site.";
-          isLoadingDescription = false;
-        });
-      } else {
-        setState(() {
-          realDescription = "Could not locate specific historical archives for ${widget.title}.";
-          isLoadingDescription = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        realDescription = "Network error. Please check your connection to view historical archives.";
-        isLoadingDescription = false;
-      });
-    }
   }
 
   Future<void> _calculateRealDistance() async {
@@ -120,7 +90,9 @@ class _RuinDetailsScreenState extends State<RuinDetailsScreen> {
               backgroundColor: Colors.transparent,
               iconTheme: const IconThemeData(color: Colors.orange),
               flexibleSpace: FlexibleSpaceBar(
-                background: Image.network(widget.imageUrl, fit: BoxFit.cover),
+                background: widget.imageUrl.isNotEmpty
+                    ? Image.network(widget.imageUrl, fit: BoxFit.cover)
+                    : Container(color: Colors.blueGrey[900]),
               ),
             ),
             SliverToBoxAdapter(
@@ -160,13 +132,9 @@ class _RuinDetailsScreenState extends State<RuinDetailsScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    isLoadingDescription
-                        ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: CircularProgressIndicator(color: Colors.orange),
-                    )
-                        : Text(
-                      realDescription,
+                    // 🌟 Displaying the description directly from the backend database
+                    Text(
+                      widget.description,
                       style: const TextStyle(fontSize: 16, color: Color(0xFFFDEDD4), height: 1.5),
                     ),
 

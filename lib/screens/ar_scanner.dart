@@ -1,7 +1,6 @@
 import 'package:ar/screens/true_Ar.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -25,24 +24,15 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   bool _isScanning = false;
   bool _isRecognized = false;
   String _recognizedLabel = "Point at a ruin and tap Scan";
-  List<dynamic> _polygonCoordinates = []; // Stores your YOLO segmentation points!
+  List<dynamic> _polygonCoordinates = []; // Stores YOLO segmentation points!
+
+  // 🌟 Dynamic 3D model URL fetched directly from backend
+  String _currentModelUrl = "";
 
   // Presentation State
   bool _show3DModel = false;
 
-  // ⚠️ CHANGE THIS TO YOUR LAPTOP'S IPV4 ADDRESS!
   static final String _backendUrl = '${ApiConfig().baseUrl}/api/detect-ruins';
-
-  // Dynamic 3D Model Mapping
-  final Map<String, String> _modelLinks = {
-    "Abhayagiri": "https://modelviewer.dev/shared-assets/models/Astronaut.glb",
-    "Moonstone": "https://modelviewer.dev/shared-assets/models/shishkebab.glb",
-    "Lion Pillar": "https://modelviewer.dev/shared-assets/models/RobotExpressive.glb"
-  };
-
-  String get _currentModelUrl {
-    return _modelLinks[_recognizedLabel] ?? "https://modelviewer.dev/shared-assets/models/Astronaut.glb";
-  }
 
   @override
   void initState() {
@@ -51,14 +41,17 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   }
 
   Future<void> _initializeCamera() async {
-    _controller = CameraController(widget.camera, ResolutionPreset.high ,      enableAudio: true, // <-- Audio is now enabled
+    _controller = CameraController(
+      widget.camera,
+      ResolutionPreset.high,
+      enableAudio: true,
     );
     await _controller!.initialize();
     if (!mounted) return;
     setState(() {});
   }
 
-  // 🌟 THE NEW BACKEND CONNECTION
+  // 🌟 BACKEND CONNECTION WITH DYNAMIC URL EXTRACTION
   Future<void> _scanEnvironment() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
 
@@ -68,10 +61,8 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
     });
 
     try {
-      // 1. Take a high-resolution photo
       final XFile imageFile = await _controller!.takePicture();
 
-      // 2. Send it to your FastAPI Server
       var request = http.MultipartRequest('POST', Uri.parse(_backendUrl));
       request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
 
@@ -83,18 +74,18 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
         List detections = data['detections'];
 
         if (detections.isNotEmpty) {
-          // Grab the first object YOLO found
           var bestMatch = detections[0];
-          String label = bestMatch['artifact_name'];
+          String label = bestMatch['artifact_name'] ?? 'Unknown Ruin';
+
+          // 🌟 Safely grab the model_url sent by the backend database
+          String modelUrl = bestMatch['model_url'] ?? '${ApiConfig().baseUrl}/static/models/medirigiriya.glb';
 
           setState(() {
             _isRecognized = true;
             _recognizedLabel = label;
-            _polygonCoordinates = bestMatch['polygon']; // We save the AR points!
+            _polygonCoordinates = bestMatch['polygon'] ?? [];
+            _currentModelUrl = modelUrl; // Save URL for TrueARScreen
           });
-
-          // Print the exact pixel coordinates to your terminal for AR mapping later!
-          print("Polygons mapped for $label: $_polygonCoordinates");
 
           _saveToUnlockedSites(label);
         } else {
@@ -116,7 +107,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   Future<void> _saveToUnlockedSites(String label) async {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Artifact Identified: $label!'), backgroundColor: Colors.green),
+        SnackBar(content: Text('Artifact Identified: $label!'), backgroundColor: Colors.orange),
       );
       final prefs = await SharedPreferences.getInstance();
       List<String> saved = prefs.getStringList('unlocked_sites') ?? [];
@@ -130,6 +121,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
       _show3DModel = false;
       _recognizedLabel = "Point at a ruin and tap Scan";
       _polygonCoordinates = [];
+      _currentModelUrl = "";
     });
   }
 
@@ -144,7 +136,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
     if (_controller == null || !_controller!.value.isInitialized) {
       return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37))),
+        body: Center(child: CircularProgressIndicator(color: Colors.orange)),
       );
     }
 
@@ -163,29 +155,6 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                 painter: RuinPolygonPainter(_polygonCoordinates),
               ),
             ),
-          // 2. The Dynamic 3D Model Overlay
-          if (_show3DModel)
-            Positioned.fill(
-              child: InteractiveViewer(
-                boundaryMargin: const EdgeInsets.all(double.infinity),
-                minScale: 0.1,
-                maxScale: 4.0,
-                child: Center(
-                  child: SizedBox(
-                    width: 300,
-                    height: 300,
-                    child: ModelViewer(
-                      src: _currentModelUrl,
-                      alt: "3D Reconstruction of $_recognizedLabel",
-                      ar: false,
-                      autoRotate: true,
-                      cameraControls: true,
-                      backgroundColor: Colors.transparent,
-                    ),
-                  ),
-                ),
-              ),
-            ),
 
           // 3. UI Overlay
           SafeArea(
@@ -202,12 +171,15 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                     children: [
                       Icon(
                           _isRecognized ? Icons.check_circle : Icons.camera_alt,
-                          color: _isRecognized ? Colors.greenAccent : const Color(0xFFD4AF37)
+                          color: _isRecognized ? Colors.greenAccent : Colors.orange
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        _recognizedLabel,
-                        style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                      Flexible(
+                        child: Text(
+                          _recognizedLabel,
+                          style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -217,11 +189,10 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     children: [
-                      // The New Scan Button!
                       if (!_isRecognized)
                         FloatingActionButton.extended(
                           onPressed: _isScanning ? null : _scanEnvironment,
-                          backgroundColor: const Color(0xFFD4AF37),
+                          backgroundColor: Colors.orange,
                           icon: _isScanning
                               ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
                               : const Icon(Icons.document_scanner, color: Colors.black),
@@ -234,33 +205,34 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                       if (_isRecognized)
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.greenAccent,
+                            backgroundColor: Colors.orange,
                             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                           ),
                           icon: const Icon(Icons.view_in_ar, color: Colors.black),
-                          label: const Text("Launch True AR", style: TextStyle(color: Colors.black, fontSize: 18)),
+                          label: const Text("Launch True AR", style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
                           onPressed: () async {
-                            // 🌟 1. COMPLETELY release the camera hardware so ARCore/ARKit can use it
+                            // 1. Release camera hardware for ARCore/ARKit
                             if (_controller != null) {
                               await _controller!.dispose();
                               _controller = null;
                             }
 
-                            // 🌟 1.5 Wait for iOS camera hardware to actually release the session
-                            // ARKit will fail with a 'permission not given' error if the AVCaptureSession is still busy!
                             await Future.delayed(const Duration(milliseconds: 800));
 
                             if (!context.mounted) return;
 
-                            // 🌟 2. Navigate to your AR plugin screen
+                            // 2. Navigate to TrueARScreen and pass both label and the backend model URL
                             await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => TrueARScreen(detectedRuin: _recognizedLabel),
+                                builder: (context) => TrueARScreen(
+                                  detectedRuin: _recognizedLabel,
+                                  modelUrl: _currentModelUrl, // 🌟 Passed dynamically from DB!
+                                ),
                               ),
                             );
 
-                            // 🌟 3. Restart the camera from scratch when coming back from AR
+                            // 3. Restart the camera when returning
                             if (mounted) {
                               _initializeCamera();
                             }
@@ -309,7 +281,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   }
 }
 
-// 🌟 THE AR POLYGON PAINTER
+// AR POLYGON PAINTER
 class RuinPolygonPainter extends CustomPainter {
   final List<dynamic> polygonPoints;
 
@@ -319,14 +291,12 @@ class RuinPolygonPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (polygonPoints.isEmpty) return;
 
-    // Glowing Gold Fill
     final paintFill = Paint()
-      ..color = const Color(0xFFD4AF37).withOpacity(0.4)
+      ..color = Colors.orange.withOpacity(0.4)
       ..style = PaintingStyle.fill;
 
-    // Solid Gold Border line
     final paintStroke = Paint()
-      ..color = const Color(0xFFD4AF37)
+      ..color = Colors.orange
       ..strokeWidth = 3.0
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
@@ -334,19 +304,17 @@ class RuinPolygonPainter extends CustomPainter {
     final path = Path();
 
     for (int i = 0; i < polygonPoints.length; i++) {
-      // Multiply the percentage by the actual screen width/height
       double x = polygonPoints[i][0] * size.width;
       double y = polygonPoints[i][1] * size.height;
 
       if (i == 0) {
-        path.moveTo(x, y); // Start the pen here
+        path.moveTo(x, y);
       } else {
-        path.lineTo(x, y); // Draw a line to the next dot
+        path.lineTo(x, y);
       }
     }
-    path.close(); // Connect the last dot back to the first dot
+    path.close();
 
-    // Draw it on the screen!
     canvas.drawPath(path, paintFill);
     canvas.drawPath(path, paintStroke);
   }

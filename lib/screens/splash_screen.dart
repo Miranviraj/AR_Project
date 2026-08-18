@@ -1,12 +1,12 @@
+import 'dart:ui'; // 🌟 Required for ImageFilter (Glassmorphism)
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart'; // 🌟 1. Import the camera package
+import 'package:camera/camera.dart';
 
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  final CameraDescription camera; // 🌟 2. Add the camera variable
+  final CameraDescription camera;
 
-  // 🌟 3. Require the camera in the constructor
   const SplashScreen({Key? key, required this.camera}) : super(key: key);
 
   @override
@@ -29,7 +29,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Optional: Automatic navigation after 4 seconds if user doesn't tap
+    // Automatic navigation after 4 seconds if user doesn't tap
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
         _navigateToLogin();
@@ -40,7 +40,6 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToLogin() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        // 🌟 Now widget.camera exists and can be passed to LoginScreen!
         pageBuilder: (context, animation, secondaryAnimation) => LoginScreen(camera: widget.camera),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
@@ -63,9 +62,10 @@ class _SplashScreenState extends State<SplashScreen>
         onTap: _navigateToLogin, // Interactive feature: tap anywhere to proceed immediately
         child: Container(
           width: double.infinity,
+          // 🌟 1. Blue-Gray Background Gradient
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.orange, Colors.deepOrange],
+              colors: [Color(0xFF1E293B), Color(0xFF334155), Color(0xFF475569)], // Slate/Blue-Gray
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -75,19 +75,43 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.account_balance,
-                    size: 80,
-                    color: Colors.white,
+                // 🌟 2. Glassmorphism Container
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      // 🌟 3. Swapped Icon for Image Asset
+                      child: Image.asset(
+                        'assets/icon.png', // Ensure this matches your pubspec.yaml exactly
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          // Fallback just in case the image fails to load
+                          return const Icon(Icons.image_not_supported, color: Colors.white54, size: 80);
+                        },
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 const Text(
                   'Ancient Ceylon AR',
                   style: TextStyle(
@@ -110,7 +134,8 @@ class _SplashScreenState extends State<SplashScreen>
                 OutlinedButton.icon(
                   onPressed: _navigateToLogin,
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white, width: 2),
+                    side: BorderSide(color: Colors.white.withOpacity(0.4), width: 1.5),
+                    backgroundColor: Colors.white.withOpacity(0.1), // Added subtle glass feel to button
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),

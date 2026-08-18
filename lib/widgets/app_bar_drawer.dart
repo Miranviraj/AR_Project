@@ -4,13 +4,11 @@ import 'package:flutter/material.dart';
 // --- 1. REUSABLE GLASSMORPHIC APP BAR ---
 class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
-  final IconData appIcon;
   final List<Widget>? actions;
 
   const GlassAppBar({
     super.key,
     this.title = "Ancient Ceylon",
-    this.appIcon = Icons.account_balance, // Default heritage icon
     this.actions,
   });
 
@@ -23,7 +21,20 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
       centerTitle: false,
       title: Row(
         children: [
-          Icon(appIcon, color: Colors.orange, size: 28),
+          // 🌟 Replaced Icon with Image.asset for the App Icon
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6), // Slightly rounds the corners of your icon
+            child: Image.asset(
+              'assets/icon.png', // Make sure this matches your image name in the assets folder!
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback just in case the image fails to load
+                return const Icon(Icons.account_balance, color: Colors.orange, size: 28);
+              },
+            ),
+          ),
           const SizedBox(width: 12),
           Text(
             title,

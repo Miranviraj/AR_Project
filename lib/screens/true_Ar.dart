@@ -1,4 +1,3 @@
-import 'dart:io' show Platform; // 🌟 Required to check iOS vs Android
 import 'package:ar_flutter_plugin_plus/datatypes/node_types.dart';
 import 'package:ar_flutter_plugin_plus/managers/ar_anchor_manager.dart';
 import 'package:ar_flutter_plugin_plus/managers/ar_location_manager.dart';
@@ -11,9 +10,14 @@ import 'package:vector_math/vector_math_64.dart' as math;
 import '../widgets/glass_container.dart';
 
 class TrueARScreen extends StatefulWidget {
-  final String detectedRuin; // Passed from ScannerCheatScreen
+  final String detectedRuin;
+  final String modelUrl; // 🌟 1. Now we require the backend URL directly!
 
-  const TrueARScreen({super.key, required this.detectedRuin});
+  const TrueARScreen({
+    super.key,
+    required this.detectedRuin,
+    required this.modelUrl // 🌟 Added to constructor
+  });
 
   @override
   State<TrueARScreen> createState() => _TrueARScreenState();
@@ -24,22 +28,6 @@ class _TrueARScreenState extends State<TrueARScreen> {
   ARObjectManager? arObjectManager;
 
   bool _isPlacing = false;
-
-  // 🌟 Map now only stores the BASE filename without the extension
-  final Map<String, String> _ruinModelBaseNames = {
-    'medirigiriya watadageya': 'medirigiriya_watadageya',
-    'polonnaruwa watadageya': 'medirigiriya_watadageya',  // Fixed spelling to match YOLO
-    'royal palace of king parakramabahu': 'royal_palace',
-  };
-
-  // 🌟 Simplified platform logic
-  String _getCorrect3DModelPath(String aiDetectedName) {
-    // If a mismatch happens, fallback to a real model you actually have (instead of default_info)
-    String baseName = _ruinModelBaseNames[aiDetectedName] ?? 'medirigiriya_watadageya';
-
-    // The ar_flutter_plugin_plus supports .glb for BOTH iOS and Android using localGLTF2
-    return "assets/models/$baseName.glb";
-  }
 
   void onARViewCreated(
       ARSessionManager arSessionManager,
@@ -63,26 +51,18 @@ class _TrueARScreenState extends State<TrueARScreen> {
     setState(() => _isPlacing = true);
 
     try {
-      // 1. Format the string passed from the scanner to match map keys
-      String aiDetectedName = widget.detectedRuin.toLowerCase();
-
-      // 2. Look up the assigned model URI dynamically based on iOS vs Android
-      String assignedModelUri = _getCorrect3DModelPath(aiDetectedName);
-
-      // 3. Get real-world camera position
       math.Matrix4? cameraPose = await arSessionManager!.getCameraPose();
 
       if (cameraPose != null) {
-        // Position it 2 meters straight ahead and slightly down
         math.Vector3 localPosition = math.Vector3(0.0, -0.2, -2.0);
         math.Vector3 worldPosition = cameraPose.transform3(localPosition);
 
         var customNode = ARNode(
-          type: NodeType.localGLTF2,
-          uri: assignedModelUri,
+          type: NodeType.webGLB,
+          uri: widget.modelUrl, // 🌟 2. Fed directly into the AR Engine!
           scale: math.Vector3(0.2, 0.2, 0.2),
           position: worldPosition,
-          rotation: math.Vector4(1.0, 0.0, 0.0, 0.0),
+          rotation: math.Vector4(0.0, 0.0, 0.0, 1.0),
         );
 
         await arObjectManager!.addNode(customNode);
@@ -91,7 +71,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Anchored 3D model for ${widget.detectedRuin}!"),
-              backgroundColor: Colors.orange, // Strict orange theme constraint applied
+              backgroundColor: Colors.orange,
             ),
           );
         }
@@ -100,7 +80,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Move your phone around slightly to track the environment first."),
-              backgroundColor: Colors.orange, // Strict orange theme constraint applied
+              backgroundColor: Colors.orange,
             ),
           );
         }
@@ -128,16 +108,13 @@ class _TrueARScreenState extends State<TrueARScreen> {
         title: Text("AR: ${widget.detectedRuin}"),
         backgroundColor: Colors.black.withOpacity(0.3),
         elevation: 0,
-        foregroundColor: Colors.orange, // Strict orange theme constraint applied
+        foregroundColor: Colors.orange,
       ),
       body: Stack(
         children: [
-          // The Native AR Camera Engine
           ARView(
             onARViewCreated: onARViewCreated,
           ),
-
-          // UI Overlay
           Positioned(
             bottom: 40,
             left: 0,
@@ -158,11 +135,11 @@ class _TrueARScreenState extends State<TrueARScreen> {
                           height: 20,
                           child: CircularProgressIndicator(color: Colors.orange, strokeWidth: 2)
                       )
-                          : const Icon(Icons.view_in_ar, color: Colors.orange), // Strict orange theme constraint applied
+                          : const Icon(Icons.view_in_ar, color: Colors.orange),
                       const SizedBox(width: 12),
                       Text(
                         _isPlacing ? "Anchoring..." : "Place ${widget.detectedRuin} Model",
-                        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 16), // Strict orange theme constraint applied
+                        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ],
                   ),

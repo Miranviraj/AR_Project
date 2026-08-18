@@ -24,6 +24,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  // 🌟 Added state variable for password visibility
+  bool _isPasswordVisible = false;
+
   Future<void> _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showSnackbar("Please fill in all fields");
@@ -105,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _emailController,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      labelText: 'Email Address', 
+                      labelText: 'Email Address',
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.1),
@@ -119,10 +122,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 20),
                   TextField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: !_isPasswordVisible, // 🌟 Updated to use state variable
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      labelText: 'Password', 
+                      labelText: 'Password',
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.1),
@@ -131,6 +134,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderSide: BorderSide.none,
                       ),
                       prefixIcon: const Icon(Icons.lock, color: Colors.white70),
+                      // 🌟 Added suffixIcon for the show/hide eye toggle
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(height: 40),

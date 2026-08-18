@@ -35,6 +35,8 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
 
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  // Stores chat data including optional image URLs
   final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
 
@@ -42,8 +44,14 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
   void initState() {
     super.initState();
     _initTts();
-    _sendInitialGreeting();
-  }
+
+    // Check if we came from the AR scanner with a detected ruin
+    if (widget.recognizedArtifact != null && widget.recognizedArtifact!.trim().isNotEmpty) {
+      triggerDetectedSiteChat(widget.recognizedArtifact!);
+    } else {
+      _sendInitialGreeting();
+    }
+  } // 🌟 FIX: Properly closed initState
 
   Future<void> _initTts() async {
     await _flutterTts.setLanguage("en-US");
@@ -72,14 +80,8 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     super.dispose();
   }
 
-  // 🌟 Dynamic initial greeting depending on whether a ruin was detected
   void _sendInitialGreeting() {
-    final bool hasArtifact = widget.recognizedArtifact != null && widget.recognizedArtifact!.trim().isNotEmpty;
-
-    final String greetingText = hasArtifact
-        ? 'Welcome! I see you are exploring the ${widget.recognizedArtifact}. What would you like to know about it?'
-        : 'Welcome! I am your AI Heritage Guide. What historical site or artifact would you like to learn about today?';
-
+    const String greetingText = 'Welcome! I am your AI Heritage Guide. What historical site or artifact would you like to learn about today?';
     setState(() {
       _messages.add({
         'role': 'ai',
@@ -89,7 +91,57 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     _speak(greetingText);
   }
 
-  // 🌟 Handles both ruin-specific and general backend inquiries
+  // 🌟 FIX: Updated to match your Map<String, dynamic> structure and use _backendUrl
+  Future<void> triggerDetectedSiteChat(String detectedSiteName) async {
+    setState(() {
+      _messages.add({
+        'role': 'user',
+        'text': "I am looking at $detectedSiteName. Can you tell me about it?"
+      });
+      _isLoading = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final response = await http.post(
+        Uri.parse(_backendUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'message': "Tell me the historical significance of $detectedSiteName.",
+          'detected_site': detectedSiteName, // Tells the backend to fetch the image URL
+          'target_lang_code': _backendLangCodes[_selectedLanguage] ?? 'en'
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        setState(() {
+          _messages.add({
+            'role': 'ai',
+            'text': data['reply'] ?? "I found some information about this site.",
+            'imageUrl': data['image_url'], // 🌟 Captures the image URL
+          });
+          _isLoading = false;
+        });
+
+        _scrollToBottom();
+        _speak(data['reply'] ?? "");
+      } else {
+        throw Exception("API Error");
+      }
+    } catch (e) {
+      setState(() {
+        _messages.add({
+          'role': 'ai',
+          'text': "My connection to the historical archives was interrupted.",
+        });
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    }
+  }
+
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
@@ -105,8 +157,6 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
 
     try {
       final bool hasArtifact = widget.recognizedArtifact != null && widget.recognizedArtifact!.trim().isNotEmpty;
-
-      // If a ruin is detected, prepend context. Otherwise, send the plain prompt.
       final String contextPrompt = hasArtifact
           ? "Regarding the ${widget.recognizedArtifact}: $text"
           : text;
@@ -125,7 +175,11 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
         final aiText = data['reply'] ?? "No response from archives.";
 
         setState(() {
-          _messages.add({'role': 'ai', 'text': aiText});
+          _messages.add({
+            'role': 'ai',
+            'text': aiText,
+            'imageUrl': data['image_url'] // In case a general query also returns an image
+          });
           _isLoading = false;
         });
 
@@ -136,8 +190,6 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
         throw Exception('Server Error: ${response.statusCode}');
       }
     } catch (e) {
-      print("BACKEND ERROR: $e");
-
       setState(() {
         _messages.add({
           'role': 'ai',
@@ -210,7 +262,9 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
                 padding: const EdgeInsets.all(16),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
-                  final isUser = _messages[index]['role'] == 'user';
+                  final message = _messages[index];
+                  final isUser = message['role'] == 'user';
+
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
@@ -243,13 +297,40 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
                                   )
                                 ]
                             ),
-                            child: Text(
-                                _messages[index]['text'],
-                                style: TextStyle(
-                                  color: isUser ? const Color(0xFF2A2118) : const Color(0xFFFDEDD4),
-                                  fontSize: 15,
-                                  height: 1.4,
-                                )
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    message['text'],
+                                    style: TextStyle(
+                                      color: isUser ? const Color(0xFF2A2118) : const Color(0xFFFDEDD4),
+                                      fontSize: 15,
+                                      height: 1.4,
+                                    )
+                                ),
+                                // 🌟 FIX: Render Image beneath text if imageUrl exists
+                                if (!isUser && message['imageUrl'] != null && message['imageUrl'].toString().isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      message['imageUrl'],
+                                      width: 250,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return const SizedBox(
+                                          height: 150,
+                                          width: 250,
+                                          child: Center(
+                                            child: CircularProgressIndicator(color: Colors.orange),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ]
+                              ],
                             ),
                           ),
                         ),

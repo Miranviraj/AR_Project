@@ -8,6 +8,8 @@ import 'dart:convert';
 import '../widgets/app_bar_drawer.dart';
 import '../widgets/glass_container.dart';
 import 'ar_reconstruction.dart';
+import '../const/api_config.dart';
+import 'ar_scanner.dart';
 
 class HomeDiscoveryScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -19,110 +21,53 @@ class HomeDiscoveryScreen extends StatefulWidget {
 }
 
 class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
-  bool _isLoadingLocation = true;
+  // Cleaned up duplicate state variables
+  List<dynamic> _liveRuins = [];
+  bool _isLoading = true;
   String _locationError = "";
-
-  List<Map<String, dynamic>> _liveHeritageSites = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchLiveNearbySites();
+    fetchLiveRuins();
   }
 
-  Future<void> _fetchLiveNearbySites() async {
+  Future<void> fetchLiveRuins() async {
     setState(() {
-      _isLoadingLocation = true;
+      _isLoading = true;
       _locationError = "";
     });
 
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) throw Exception("GPS Disabled");
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) throw Exception("Permission Denied");
-      }
-
+      // 1. Fetch exact GPS location dynamically
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+          desiredAccuracy: LocationAccuracy.high);
+      double userLat = position.latitude;
+      double userLon = position.longitude;
 
-      final String wikiUrl =
-          "https://en.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${position.latitude}|${position.longitude}&ggsradius=10000&ggslimit=50&prop=pageimages|coordinates&pithumbsize=400&format=json";
-
-      final response = await http.get(Uri.parse(wikiUrl));
+      // 2. Pass dynamic coordinates to the nearby-sites endpoint
+      final url = Uri.parse('${ApiConfig().baseUrl}/api/nearby-sites?user_lat=$userLat&user_lon=$userLon&radius_km=500.0');
+      final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final pages = data['query']?['pages'] as Map<String, dynamic>? ?? {};
-
-        List<Map<String, dynamic>> fetchedSites = [];
-
-        for (var page in pages.values) {
-          String rawTitle = page['title'] ?? "";
-          String title = rawTitle.toLowerCase();
-
-          int heritageScore = 0;
-          if (title.contains('vihara') || title.contains('stupa') ||
-              title.contains('temple') || title.contains('ruin') ||
-              title.contains('dagoba') || title.contains('aramaya') ||
-              title.contains('pokuna') || title.contains('rock') ||
-              title.contains('devalaya') || title.contains('kovil') ||
-              title.contains('kotte') || title.contains('palace') ||
-              title.contains('watadage')) {
-            heritageScore = 100;
-          }
-
-          if (heritageScore == 0) continue;
-
-          double siteLat = (page['coordinates']?[0]?['lat'] as num?)?.toDouble() ?? 0.0;
-          double siteLon = (page['coordinates']?[0]?['lon'] as num?)?.toDouble() ?? 0.0;
-
-          double distanceInMeters = Geolocator.distanceBetween(
-              position.latitude, position.longitude, siteLat, siteLon
-          );
-
-          String formattedDistance;
-          if (distanceInMeters >= 1000) {
-            formattedDistance = "${(distanceInMeters / 1000).toStringAsFixed(1)} km away";
-          } else {
-            formattedDistance = "${distanceInMeters.toStringAsFixed(0)} m away";
-          }
-
-          fetchedSites.add({
-            'name': rawTitle,
-            'image': page['thumbnail']?['source'] ??
-                'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/300px-No_image_available.svg.png',
-            'distanceMeters': distanceInMeters,
-            'distanceFormatted': formattedDistance,
-            'score': heritageScore,
-            'tag1': 'Ancient Site',
-            'tag2': 'Verified',
-            'lat': siteLat,
-            'lon': siteLon,
-          });
-        }
-
-        fetchedSites.sort((a, b) {
-          int scoreComparison = b['score'].compareTo(a['score']);
-          if (scoreComparison != 0) return scoreComparison;
-          return a['distanceMeters'].compareTo(b['distanceMeters']);
-        });
+        final data = jsonDecode(response.body);
 
         setState(() {
-          _liveHeritageSites = fetchedSites.take(4).toList();
-          _isLoadingLocation = false;
+          // 3. Update the correct list
+          _liveRuins = data['sites'] ?? [];
+          _isLoading = false;
         });
       } else {
-        throw Exception("Web API Failed");
+        setState(() {
+          _locationError = "Server Error: ${response.statusCode}";
+          _isLoading = false;
+        });
       }
     } catch (e) {
+      print("Error fetching ruins: $e");
       setState(() {
-        _isLoadingLocation = false;
-        _locationError = e.toString();
+        _locationError = "Failed to load data. Check backend connection.";
+        _isLoading = false;
       });
     }
   }
@@ -130,12 +75,11 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true, // Required for the glass effect to overlay the body
+      extendBodyBehindAppBar: true,
       appBar: const GlassAppBar(
         title: "Ancient Ceylon AR",
       ),
       drawer: const MainAppDrawer(),
-
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -151,9 +95,8 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Featured Hero Card with fixed 4*2 aspect ratio
               AspectRatio(
-                aspectRatio: 4 / 2,
+                aspectRatio: 4 / 2, // Maintained exact aspect ratio parameter
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -179,7 +122,8 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Featured Site', style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12, fontWeight: FontWeight.bold)),
+                        // Applied strict orange theme
+                        Text('Featured Site', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
                         SizedBox(height: 4),
                         Text('Explore Ancient\nCeylon', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                       ],
@@ -189,7 +133,6 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Scan Ruins Button Card
               InkWell(
                 onTap: () {
                   Navigator.push(
@@ -202,7 +145,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(Icons.qr_code_scanner, size: 48, color: Color(0xFFD4AF37)),
+                        Icon(Icons.qr_code_scanner, size: 48, color: Colors.orange), // Applied strict orange theme
                         SizedBox(height: 12),
                         Text('Scan Ruins', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                         SizedBox(height: 4),
@@ -214,22 +157,22 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Dynamic Live Data Section Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
                       const Text('Live Ruins Near You', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                      if (_isLoadingLocation) const Padding(
+                      if (_isLoading) const Padding(
                         padding: EdgeInsets.only(left: 8.0),
-                        child: SizedBox(height: 12, width: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFD4AF37))),
+                        child: SizedBox(height: 12, width: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange)),
                       )
                     ],
                   ),
                   TextButton(
-                    onPressed: () => _fetchLiveNearbySites(),
-                    child: const Icon(Icons.refresh, color: Color(0xFFD4AF37), size: 18),
+                    // Fixed refresh button routing to correct method
+                    onPressed: () => fetchLiveRuins(),
+                    child: const Icon(Icons.refresh, color: Colors.orange, size: 18),
                   )
                 ],
               ),
@@ -238,20 +181,21 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
               if (_locationError.isNotEmpty)
                 Text('Connection Error: $_locationError', style: const TextStyle(color: Colors.redAccent)),
 
-              if (!_isLoadingLocation && _liveHeritageSites.isEmpty && _locationError.isEmpty)
-                const Text('No Wikipedia heritage sites found within 10km.', style: TextStyle(color: Colors.grey)),
+              if (!_isLoading && _liveRuins.isEmpty && _locationError.isEmpty)
+                const Text('No heritage sites found in the database.', style: TextStyle(color: Colors.grey)),
 
-              // Render list with formatted live distance
-              if (!_isLoadingLocation && _liveHeritageSites.isNotEmpty)
-                ..._liveHeritageSites.map((site) => _buildRuinsListItem(
+              // Successfully map the backend response to the UI
+              if (!_isLoading && _liveRuins.isNotEmpty)
+                ..._liveRuins.map((site) => _buildRuinsListItem(
                   context: context,
-                  title: site['name'],
-                  distance: site['distanceFormatted'],
-                  tag1: site['tag1'],
-                  tag2: site['tag2'],
-                  imageUrl: site['image'],
-                  lat: site['lat'],
-                  lon: site['lon'],
+                  title: site['name'] ?? 'Unknown',
+                  distance: "${site['distance_km']} km away",
+                  tag1: 'Heritage DB',
+                  tag2: 'Verified',
+                  imageUrl: site['image_url'] ?? '',
+                  lat: site['lat'] ?? 0.0,
+                  lon: site['lon'] ?? 0.0,
+                  description: site['description'] ?? 'No description available',
                 )),
               const SizedBox(height: 80),
             ],
@@ -270,6 +214,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     required String imageUrl,
     required double lat,
     required double lon,
+    required String description,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -279,12 +224,19 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
           contentPadding: const EdgeInsets.all(12),
           leading: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.network(
+            child: imageUrl.isNotEmpty
+                ? Image.network(
               imageUrl,
               width: 60,
               height: 60,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(width: 60, height: 60, color: Colors.blueGrey[900]),
+            )
+                : Container(
+              width: 60,
+              height: 60,
+              color: Colors.blueGrey[900],
+              child: const Icon(Icons.image_not_supported, color: Colors.orange, size: 20),
             ),
           ),
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
@@ -322,6 +274,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
                   imageUrl: imageUrl,
                   lat: lat,
                   lon: lon,
+                  description: description,
                 ),
               ),
             );
@@ -335,7 +288,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.3), // Solidified thematic constraint
+        color: Colors.orange.withOpacity(0.3),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(text, style: const TextStyle(fontSize: 10, color: Colors.white70)),
