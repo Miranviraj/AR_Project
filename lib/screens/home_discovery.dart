@@ -5,7 +5,9 @@ import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../widgets/app_bar_drawer.dart';
 import '../widgets/glass_container.dart';
+import 'ar_reconstruction.dart';
 
 class HomeDiscoveryScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -128,33 +130,12 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: const NetworkImage('https://images.unsplash.com/photo-1507720979853-9d086f685d34?q=80&w=1000&auto=format&fit=crop'),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.6), BlendMode.darken),
-            ),
-          ),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.account_balance, color: Colors.orange),
-            SizedBox(width: 8),
-            Text(
-              'Heritage AR',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ],
-        ),
+      extendBodyBehindAppBar: true, // Required for the glass effect to overlay the body
+      appBar: const GlassAppBar(
+        title: "Ancient Ceylon AR",
       ),
+      drawer: const MainAppDrawer(),
+
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -213,9 +194,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const ChatGuideScreen(recognizedArtifact: ''),
-                    ),
+                    MaterialPageRoute(builder: (context) => ScannerCheatScreen(camera: widget.camera)),
                   );
                 },
                 child: const GlassContainer(

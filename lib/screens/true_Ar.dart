@@ -27,23 +27,18 @@ class _TrueARScreenState extends State<TrueARScreen> {
 
   // 🌟 Map now only stores the BASE filename without the extension
   final Map<String, String> _ruinModelBaseNames = {
-    'medirigiriya vatadage': 'medirigiriya_watadageya',
-    'polonnaruwa vatadage': 'medirigiriya_watadageya',
+    'medirigiriya watadageya': 'medirigiriya_watadageya',
+    'polonnaruwa watadageya': 'medirigiriya_watadageya',  // Fixed spelling to match YOLO
     'royal palace of king parakramabahu': 'royal_palace',
-    // Add all your YOLO class names here in lowercase mapping to their file base name
   };
 
-  // 🌟 Dynamic platform branching logic
+  // 🌟 Simplified platform logic
   String _getCorrect3DModelPath(String aiDetectedName) {
-    String baseName = _ruinModelBaseNames[aiDetectedName] ?? 'default_info';
+    // If a mismatch happens, fallback to a real model you actually have (instead of default_info)
+    String baseName = _ruinModelBaseNames[aiDetectedName] ?? 'medirigiriya_watadageya';
 
-    if (Platform.isIOS) {
-      // iOS Apple ARKit requirement
-      return "assets/models/$baseName.usdz";
-    } else {
-      // Android ARCore requirement
-      return "assets/models/$baseName.glb";
-    }
+    // The ar_flutter_plugin_plus supports .glb for BOTH iOS and Android using localGLTF2
+    return "assets/models/$baseName.glb";
   }
 
   void onARViewCreated(

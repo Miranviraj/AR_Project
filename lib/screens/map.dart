@@ -142,11 +142,13 @@ class _HeritageExplorerMapScreenState extends State<HeritageExplorerMapScreen> {
               ),
               PolylineLayer(
                 polylines: [
-                  Polyline(
-                    points: _routePoints,
-                    strokeWidth: 5.0,
-                    color: Colors.orange.withOpacity(0.8),
-                  ),
+                  // 🌟 FIX: Only render the polyline if we actually have route points
+                  if (_routePoints.isNotEmpty)
+                    Polyline(
+                      points: _routePoints,
+                      strokeWidth: 5.0,
+                      color: Colors.orange.withOpacity(0.8),
+                    ),
                 ],
               ),
               MarkerLayer(

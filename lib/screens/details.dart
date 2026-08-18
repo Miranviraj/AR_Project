@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/glass_container.dart';
+import 'map.dart';
 
 class RuinDetailsScreen extends StatefulWidget {
   final String title;
@@ -190,7 +191,15 @@ class _RuinDetailsScreenState extends State<RuinDetailsScreen> {
                         ),
                       ),
                       onPressed: () {
-                        // Navigation logic here
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => HeritageExplorerMapScreen(
+                              targetLat: widget.lat,
+                              targetLon: widget.lon,
+                            ),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 16),
