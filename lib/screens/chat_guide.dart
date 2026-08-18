@@ -7,8 +7,9 @@ import '../const/api_config.dart';
 import '../widgets/glass_container.dart';
 
 class ChatGuideScreen extends StatefulWidget {
-  final String recognizedArtifact;
-  const ChatGuideScreen({super.key, required this.recognizedArtifact});
+  final String? recognizedArtifact; // Nullable when no ruin is detected
+
+  const ChatGuideScreen({super.key, this.recognizedArtifact});
 
   @override
   State<ChatGuideScreen> createState() => _ChatGuideScreenState();
@@ -17,23 +18,18 @@ class ChatGuideScreen extends StatefulWidget {
 class _ChatGuideScreenState extends State<ChatGuideScreen> {
   String _selectedLanguage = 'English';
 
-  // Maps UI dropdown to TTS engine languages
   final Map<String, String> _ttsLanguages = {
     'English': 'en-US',
     'Sinhala': 'si-LK',
   };
 
-  // Maps UI dropdown to the Pivot Language codes your Python backend expects
   final Map<String, String> _backendLangCodes = {
     'English': 'en',
     'Sinhala': 'si',
   };
 
-  // ⚠️ CHANGE THIS TO YOUR LAPTOP'S IPV4 ADDRESS!
-  // If using Android Emulator, use 'http://10.0.2.2:8000/api/chat'
   static final String _backendUrl = '${ApiConfig().baseUrl}/api/chat';
 
-  // Voice Engine
   final FlutterTts _flutterTts = FlutterTts();
   bool _isSpeaking = false;
 
@@ -46,7 +42,6 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
   void initState() {
     super.initState();
     _initTts();
-    // Simulate the first greeting
     _sendInitialGreeting();
   }
 
@@ -77,16 +72,24 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     super.dispose();
   }
 
+  // 🌟 Dynamic initial greeting depending on whether a ruin was detected
   void _sendInitialGreeting() {
+    final bool hasArtifact = widget.recognizedArtifact != null && widget.recognizedArtifact!.trim().isNotEmpty;
+
+    final String greetingText = hasArtifact
+        ? 'Welcome! I see you are exploring the ${widget.recognizedArtifact}. What would you like to know about it?'
+        : 'Welcome! I am your AI Heritage Guide. What historical site or artifact would you like to learn about today?';
+
     setState(() {
       _messages.add({
         'role': 'ai',
-        'text': 'Welcome! I see you are exploring the ${widget.recognizedArtifact}. What would you like to know about it?'
+        'text': greetingText,
       });
     });
-    _speak('Welcome! I see you are exploring the ${widget.recognizedArtifact}. What would you like to know about it?');
+    _speak(greetingText);
   }
 
+  // 🌟 Handles both ruin-specific and general backend inquiries
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
@@ -101,7 +104,12 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     _textController.clear();
 
     try {
-      String contextPrompt = "Regarding the ${widget.recognizedArtifact}: $text";
+      final bool hasArtifact = widget.recognizedArtifact != null && widget.recognizedArtifact!.trim().isNotEmpty;
+
+      // If a ruin is detected, prepend context. Otherwise, send the plain prompt.
+      final String contextPrompt = hasArtifact
+          ? "Regarding the ${widget.recognizedArtifact}: $text"
+          : text;
 
       final response = await http.post(
         Uri.parse(_backendUrl),
@@ -209,17 +217,14 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
                       mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // 🌟 INJECT YOUR CUSTOM SKETCH HERE
                         if (!isUser) ...[
                           const CircleAvatar(
                             radius: 18,
-                            backgroundImage: AssetImage('assets/guide_portrait.jpg'),
+                            backgroundImage: AssetImage('assets/guide_portrait.png'),
                             backgroundColor: Colors.transparent,
                           ),
                           const SizedBox(width: 8),
                         ],
-
-                        // Chat Bubble
                         Flexible(
                           child: Container(
                             padding: const EdgeInsets.all(16),

@@ -1,242 +1,312 @@
+import 'package:ar/screens/true_Ar.dart';
 import 'package:flutter/material.dart';
-import 'historical_contet.dart';
+import 'package:camera/camera.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:io';
+import '../const/api_config.dart';
+import 'chat_guide.dart';
 import '../widgets/glass_container.dart';
 
-class ARReconstructionScreen extends StatelessWidget {
-  const ARReconstructionScreen({super.key});
+class ScannerCheatScreen extends StatefulWidget {
+  final CameraDescription camera;
+  const ScannerCheatScreen({super.key, required this.camera});
+
+  @override
+  State<ScannerCheatScreen> createState() => _ScannerCheatScreenState();
+}
+
+class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
+  CameraController? _controller;
+
+  // AI State Variables
+  bool _isScanning = false;
+  bool _isRecognized = false;
+  String _recognizedLabel = "Point at a ruin and tap Scan";
+
+  // Presentation State
+  bool _show3DModel = false;
+
+  // ⚠️ CHANGE THIS TO YOUR LAPTOP'S IPV4 ADDRESS!
+  static final String _backendUrl = '${ApiConfig().baseUrl}/api/detect-ruins';
+
+  // Dynamic 3D Model Mapping
+  final Map<String, String> _modelLinks = {
+    "Abhayagiri": "https://modelviewer.dev/shared-assets/models/Astronaut.glb",
+    "Moonstone": "https://modelviewer.dev/shared-assets/models/shishkebab.glb",
+    "Lion Pillar": "https://modelviewer.dev/shared-assets/models/RobotExpressive.glb"
+  };
+
+  String get _currentModelUrl {
+    return _modelLinks[_recognizedLabel] ?? "https://modelviewer.dev/shared-assets/models/Astronaut.glb";
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    _controller = CameraController(
+      widget.camera,
+      ResolutionPreset.high,
+      enableAudio: true,
+    );
+    await _controller!.initialize();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _scanEnvironment() async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    setState(() {
+      _isScanning = true;
+      _recognizedLabel = "Analyzing structure...";
+    });
+
+    try {
+      final XFile imageFile = await _controller!.takePicture();
+
+      var request = http.MultipartRequest('POST', Uri.parse(_backendUrl));
+      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        List detections = data['detections'];
+
+        if (detections.isNotEmpty) {
+          var bestMatch = detections[0];
+          String label = bestMatch['artifact_name'];
+
+          setState(() {
+            _isRecognized = true;
+            _recognizedLabel = label;
+          });
+
+          _saveToUnlockedSites(label);
+        } else {
+          setState(() {
+            _recognizedLabel = "No ruins detected. Try another angle.";
+          });
+        }
+      } else {
+        setState(() => _recognizedLabel = "Server Error: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Network error: $e");
+      setState(() => _recognizedLabel = "Could not connect to AI server.");
+    } finally {
+      setState(() => _isScanning = false);
+    }
+  }
+
+  Future<void> _saveToUnlockedSites(String label) async {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Artifact Identified: $label!'), backgroundColor: Colors.green),
+      );
+      final prefs = await SharedPreferences.getInstance();
+      List<String> saved = prefs.getStringList('unlocked_sites') ?? [];
+      if (!saved.contains(label)) prefs.setStringList('unlocked_sites', [...saved, label]);
+    }
+  }
+
+  void _resetScanner() {
+    setState(() {
+      _isRecognized = false;
+      _show3DModel = false;
+      _recognizedLabel = "Point at a ruin and tap Scan";
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.orange)),
+      );
+    }
+
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Simulated AR Background (Camera Feed + 3D Model)
           Positioned.fill(
-            child: Image.network(
-              'https://images.unsplash.com/photo-1620063165181-4206e23bb41c?q=80&w=1000&auto=format&fit=crop', // Placeholder for ruins background
-              fit: BoxFit.cover,
+            child: CameraPreview(_controller!),
+          ),
+
+          if (_show3DModel)
+            Positioned.fill(
+              child: InteractiveViewer(
+                boundaryMargin: const EdgeInsets.all(double.infinity),
+                minScale: 0.1,
+                maxScale: 4.0,
+                child: Center(
+                  child: SizedBox(
+                    width: 300,
+                    height: 300,
+                    child: ModelViewer(
+                      src: _currentModelUrl,
+                      alt: "3D Reconstruction of $_recognizedLabel",
+                      ar: false,
+                      autoRotate: true,
+                      cameraControls: true,
+                      backgroundColor: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
 
-          // Subtle Grid Overlay (Optional, for that "tech" feel)
-          Positioned.fill(
-            child: CustomPaint(painter: GridPainter()),
-          ),
-
-          // Top App Bar Elements
-          Positioned(
-            top: 50,
-            left: 16,
-            right: 16,
-            child: Row(
+          SafeArea(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                CircleAvatar(
-                  backgroundColor: Colors.black45,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-                Column(
-                  children: [
-                    const Text('Royal Palace Ruins', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black, blurRadius: 4)])),
-                    const SizedBox(height: 4),
-                    GlassContainer(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      borderRadius: BorderRadius.circular(12),
-                      color: const Color(0xFFD4AF37).withOpacity(0.2),
-                      border: Border.all(color: const Color(0xFFD4AF37), width: 1),
-                      child: const Text('AR LIVE VIEW', style: TextStyle(color: Color(0xFFD4AF37), fontSize: 10, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                CircleAvatar(
-                  backgroundColor: Colors.black45,
-                  child: IconButton(
-                    icon: const Icon(Icons.info_outline, color: Colors.white),
-                    onPressed: () {
-                      // Slide up the context panel
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => const HistoricalContextPanel(),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Simulated AR Hotspot 1
-          Positioned(
-            top: 300,
-            left: 100,
-            child: _buildHotspot(Icons.remove_red_eye),
-          ),
-
-          // Simulated AR Hotspot 2
-          Positioned(
-            top: 450,
-            right: 80,
-            child: _buildHotspot(Icons.history),
-          ),
-
-          // Bottom Controls Area
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: GlassContainer(
-              padding: const EdgeInsets.all(16),
-              color: Colors.black.withOpacity(0.3), // A dark tint for the glass
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
-              border: Border.all(color: Colors.white12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Action Cards Row
-                  Row(
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
                     children: [
-                      Expanded(child: _buildActionCard(context, Icons.headphones, 'Audio Guide', '02:14 Remaining', true)),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.orange),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildActionCard(context, Icons.layers, 'Reconstruct', 'Show original form', false)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Did You Know Card
-                  GlassContainer(
-                    padding: const EdgeInsets.all(16),
-                    color: Colors.black.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      Expanded(
+                        child: GlassContainer(
+                          padding: const EdgeInsets.all(16),
+                          color: Colors.black.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text('DID YOU KNOW?', style: TextStyle(color: Color(0xFFD4AF37), fontSize: 10, fontWeight: FontWeight.bold)),
-                              SizedBox(height: 4),
-                              Text('This stone platform was once the foundation for a 7-story...', style: TextStyle(color: Colors.white, fontSize: 12)),
+                              Icon(
+                                  _isRecognized ? Icons.check_circle : Icons.camera_alt,
+                                  color: _isRecognized ? Colors.greenAccent : Colors.orange
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  _recognizedLabel,
+                                  style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white24,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          ),
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => const HistoricalContextPanel(),
-                            );
-                          },
-                          child: const Text('Read More', style: TextStyle(fontSize: 12, color: Colors.white)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Bottom Camera Actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildBottomIcon(Icons.photo_library, 'Gallery'),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(color: const Color(0xFFD4AF37), width: 3),
-                        ),
-                        child: const Icon(Icons.camera, color: Colors.black, size: 32),
                       ),
-                      _buildBottomIcon(Icons.qr_code_scanner, 'Scan'),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+                ),
 
-  Widget _buildHotspot(IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFD4AF37).withOpacity(0.8),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(color: const Color(0xFFD4AF37).withOpacity(0.5), blurRadius: 10, spreadRadius: 2),
-        ],
-      ),
-      child: Icon(icon, color: Colors.black, size: 20),
-    );
-  }
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    children: [
+                      if (!_isRecognized)
+                        FloatingActionButton.extended(
+                          onPressed: _isScanning ? null : _scanEnvironment,
+                          backgroundColor: Colors.orange,
+                          icon: _isScanning
+                              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                              : const Icon(Icons.document_scanner, color: Colors.black),
+                          label: Text(
+                              _isScanning ? "Analyzing..." : "SCAN RUIN",
+                              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)
+                          ),
+                        ),
 
-  Widget _buildActionCard(BuildContext context, IconData icon, String title, String subtitle, bool isPlayable) {
-    return GlassContainer(
-      padding: const EdgeInsets.all(12),
-      color: Colors.white.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(16),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFFD4AF37), size: 24),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                      if (_isRecognized)
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.greenAccent,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          ),
+                          icon: const Icon(Icons.view_in_ar, color: Colors.black),
+                          label: const Text("Launch True AR", style: TextStyle(color: Colors.black, fontSize: 18)),
+                          onPressed: () async {
+                            if (_controller != null) {
+                              await _controller!.dispose();
+                              _controller = null;
+                            }
+
+                            await Future.delayed(const Duration(milliseconds: 800));
+
+                            if (!context.mounted) return;
+
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TrueARScreen(detectedRuin: _recognizedLabel),
+                              ),
+                            );
+
+                            if (mounted) {
+                              _initializeCamera();
+                            }
+                          },
+                        ),
+
+                      if (_isRecognized)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                            ),
+                            icon: const Icon(Icons.chat, color: Colors.black),
+                            label: const Text("Open AI Tourist Guide", style: TextStyle(color: Colors.black, fontSize: 18)),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ChatGuideScreen(recognizedArtifact: _recognizedLabel),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                      if (_isRecognized)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.refresh, color: Colors.white70),
+                            label: const Text("Scan Another Ruin", style: TextStyle(color: Colors.white70)),
+                            onPressed: _resetScanner,
+                          ),
+                        )
+                    ],
+                  ),
+                )
               ],
             ),
           ),
-          if (isPlayable)
-            const Icon(Icons.play_circle_fill, color: Color(0xFFD4AF37), size: 28),
         ],
       ),
     );
   }
-
-  Widget _buildBottomIcon(IconData icon, String label) {
-    return Column(
-      children: [
-        Icon(icon, color: Colors.white, size: 24),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 10)),
-      ],
-    );
-  }
-}
-
-// Simple Custom Painter for the AR Grid
-class GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    var paint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
-      ..strokeWidth = 1;
-
-    for (double i = 0; i < size.width; i += 50) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += 50) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

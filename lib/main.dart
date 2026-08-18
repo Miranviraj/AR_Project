@@ -1,55 +1,39 @@
-import 'package:ar/screens/login_screen.dart';
+import 'package:ar/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart'; // 🌟 Added camera import
-import 'screens/main_navigation.dart';
+import 'package:camera/camera.dart'; // 🌟 1. Import the camera package
 
-// 🌟 FIX 1: Make main() async to turn on the camera hardware first
+
+// 🌟 2. Make main() an async function
 Future<void> main() async {
-  // Ensure Flutter is fully initialized before talking to the hardware
+  // 🌟 3. Ensure Flutter is initialized before interacting with the device hardware
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Get the list of available cameras on the device
+  // 🌟 4. Fetch the list of available cameras on the device
   final cameras = await availableCameras();
 
-  // Grab the very first camera (which is always the back camera)
+  // 🌟 5. Grab the first camera (usually the back camera)
   final firstCamera = cameras.first;
 
-  // Pass it into your app
+  // 🌟 6. Pass the camera into your app
   runApp(HeritageARApp(camera: firstCamera));
 }
 
 class HeritageARApp extends StatelessWidget {
-  final CameraDescription camera;
+  final CameraDescription camera; // 🌟 7. Require the camera here too
 
-  const HeritageARApp({super.key, required this.camera});
+  const HeritageARApp({Key? key, required this.camera}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Heritage AR',
+      title: 'AR Heritage Guide',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
-        // 🌟 MODERN GLASS PALETTE
-        scaffoldBackgroundColor: Colors.transparent, // Will be overridden by gradient backgrounds
-        primaryColor: const Color(0xFFD4AF37), // Premium Gold Accents
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFD4AF37),
-          surface: Color(0x33FFFFFF), // Transparent surface for default cards if any
-          onSurface: Colors.white, 
-        ),
-        // Modern typography
-        fontFamily: 'Roboto', // Or standard sans-serif
-        
-        // Style the navigation bar to match the sleek theme
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: Colors.transparent, // Let glassmorphism show through
-          selectedItemColor: Color(0xFFD4AF37), 
-          unselectedItemColor: Colors.white54,
-          elevation: 0,
-        ),
+        primarySwatch: Colors.orange, // Strictly maintaining the orange theme
+        scaffoldBackgroundColor: Colors.white,
       ),
-      home: LoginScreen(camera: camera,),
+      // 🌟 8. Pass the camera down to the SplashScreen
+      home: SplashScreen(camera: camera),
     );
   }
 }
