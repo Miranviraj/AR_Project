@@ -7,16 +7,17 @@ import 'package:ar_flutter_plugin_plus/models/ar_node.dart';
 import 'package:ar_flutter_plugin_plus/widgets/ar_view.dart';
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as math;
+import 'dart:io' show Platform; // 🌟 Added for iOS detection
 import '../widgets/glass_container.dart';
 
 class TrueARScreen extends StatefulWidget {
   final String detectedRuin;
-  final String modelUrl; // 🌟 1. Now we require the backend URL directly!
+  final String modelUrl;
 
   const TrueARScreen({
     super.key,
     required this.detectedRuin,
-    required this.modelUrl // 🌟 Added to constructor
+    required this.modelUrl
   });
 
   @override
@@ -57,9 +58,16 @@ class _TrueARScreenState extends State<TrueARScreen> {
         math.Vector3 localPosition = math.Vector3(0.0, -0.2, -2.0);
         math.Vector3 worldPosition = cameraPose.transform3(localPosition);
 
+        // 🌟 Platform Check: Swap GLB to USDZ on iOS natively
+        String finalModelUrl = widget.modelUrl;
+        if (Platform.isIOS && finalModelUrl.endsWith('.glb')) {
+          finalModelUrl = finalModelUrl.replaceAll('.glb', '.usdz');
+          debugPrint("🍏 iOS Detected: Swapped AR model to $finalModelUrl");
+        }
+
         var customNode = ARNode(
           type: NodeType.webGLB,
-          uri: widget.modelUrl, // 🌟 2. Fed directly into the AR Engine!
+          uri: finalModelUrl, // 🌟 Fed the dynamically swapped URL here
           scale: math.Vector3(0.2, 0.2, 0.2),
           position: worldPosition,
           rotation: math.Vector4(0.0, 0.0, 0.0, 1.0),
@@ -71,7 +79,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Anchored 3D model for ${widget.detectedRuin}!"),
-              backgroundColor: Colors.orange,
+              backgroundColor: Colors.orange, // Maintained exact color theme
             ),
           );
         }
