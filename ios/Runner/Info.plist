@@ -16,6 +16,14 @@
     <string>ar</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+
+    <!-- App Transport Security (Allows HTTP Model Downloads) -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
+
     <key>CFBundleShortVersionString</key>
     <string>$(FLUTTER_BUILD_NAME)</string>
     <key>CFBundleSignature</key>
@@ -26,8 +34,6 @@
     <true/>
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>We need your location to find nearby ancient ruins.</string>
     <key>UIMainStoryboardFile</key>
     <string>Main</string>
     <key>UISupportedInterfaceOrientations</key>
@@ -48,7 +54,7 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
 
-    <!-- AR and Location Permissions -->
+    <!-- AR, Camera, Microphone, and Location Permissions -->
     <key>NSCameraUsageDescription</key>
     <string>This app requires camera access to create augmented reality experiences.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
