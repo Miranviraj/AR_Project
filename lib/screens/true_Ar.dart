@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart'; // 🌟 Added for OpenFilex and ResultType
+import 'package:http/http.dart' as http;
 import 'dart:io';
 import '../widgets/glass_container.dart';
 
@@ -19,38 +22,64 @@ class TrueARScreen extends StatefulWidget {
 
 class _TrueARScreenState extends State<TrueARScreen> {
   bool _isLaunching = false;
+  String _statusText = "AR අත්දැකීම අරඹන්න"; // 🌟 Defined the status text variable
 
-  // 🌟 NATIVE AR LAUNCHER: This is 100% crash-proof and identical to iPhone's smoothness
+  // 🌟 NATIVE AR LAUNCHER: Deep Link Intent (Bypasses Chrome Completely!)
   Future<void> _launchNativeAR() async {
     setState(() {
       _isLaunching = true;
+      _statusText = "AR සූදානම් වෙමින් පවතී...";
     });
 
     try {
+      // Clean URL Extension
+      String rawUrl = widget.modelUrl;
+      if (rawUrl.endsWith('.usdz')) {
+        rawUrl = rawUrl.substring(0, rawUrl.length - 5);
+      } else if (rawUrl.endsWith('.glb')) {
+        rawUrl = rawUrl.substring(0, rawUrl.length - 4);
+      }
+
       if (Platform.isAndroid) {
-        // ANDROID: Launch Google Scene Viewer
-        final String encodedUrl = Uri.encodeComponent(widget.modelUrl);
+        // ANDROID: Launch Google Scene Viewer via Intent (Bypass Browser)
+        final String androidUrl = '$rawUrl.glb';
+        final String encodedUrl = Uri.encodeComponent(androidUrl);
         final String encodedTitle = Uri.encodeComponent(widget.detectedRuin);
 
-        // This invokes the exact screen you sent in your screenshot!
-        final Uri intentUri = Uri.parse(
-            'https://arvr.google.com/scene-viewer/1.0?file=$encodedUrl&title=$encodedTitle&mode=ar_only&resizable=true'
-        );
+        // 🌟 THE MAGIC FIX: Android Intent URL
+        final String intentUrl = 'intent://arvr.google.com/scene-viewer/1.0?file=$encodedUrl&title=$encodedTitle&mode=ar_only&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;';
 
-        if (await canLaunchUrl(intentUri)) {
-          await launchUrl(intentUri, mode: LaunchMode.externalApplication);
-        } else {
-          throw 'Could not launch AR Viewer';
+        try {
+          // Launch the Intent directly
+          await launchUrl(Uri.parse(intentUrl), mode: LaunchMode.externalApplication);
+        } catch (e) {
+          // Fallback if the intent completely fails
+          final Uri fallbackUri = Uri.parse('https://arvr.google.com/scene-viewer/1.0?file=$encodedUrl&title=$encodedTitle&mode=ar_only');
+          await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
         }
-      } else if (Platform.isIOS) {
-        // IOS: Launch AR Quick Look
-        final String iosUrl = widget.modelUrl.replaceAll('.glb', '.usdz');
-        final Uri iosUri = Uri.parse(iosUrl);
 
-        if (await canLaunchUrl(iosUri)) {
-          await launchUrl(iosUri, mode: LaunchMode.externalApplication);
+      } else if (Platform.isIOS) {
+        // IOS: Bypass HTTP restriction by downloading locally first
+        setState(() { _statusText = "Downloading iOS Model..."; });
+
+        final String iosUrl = '$rawUrl.usdz';
+        final response = await http.get(Uri.parse(iosUrl));
+
+        if (response.statusCode == 200) {
+          // Save to temporary directory
+          final dir = await getTemporaryDirectory();
+          final safeName = widget.detectedRuin.replaceAll(' ', '_');
+          final localFile = File('${dir.path}/$safeName.usdz');
+
+          await localFile.writeAsBytes(response.bodyBytes);
+
+          // Launch local USDZ file natively using open_filex
+          final result = await OpenFilex.open(localFile.path);
+          if (result.type != ResultType.done) {
+            throw 'Error opening AR file: ${result.message}';
+          }
         } else {
-          throw 'Could not launch iOS AR';
+          throw 'Download failed. Status: ${response.statusCode}';
         }
       }
     } catch (e) {
@@ -67,6 +96,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
       if (mounted) {
         setState(() {
           _isLaunching = false;
+          _statusText = "AR අත්දැකීම අරඹන්න";
         });
       }
     }
@@ -86,12 +116,12 @@ class _TrueARScreenState extends State<TrueARScreen> {
       ),
       body: Stack(
         children: [
-          // Background Image (You can change this to a picture of the ruin)
+          // Background Image
           Positioned.fill(
             child: Opacity(
               opacity: 0.4,
               child: Image.asset(
-                'Images/triangle.png', // Change this to a beautiful background if you want
+                'Images/triangle.png', // Background image
                 fit: BoxFit.cover,
               ),
             ),
@@ -133,7 +163,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
             bottom: 50,
             left: 20,
             right: 20,
-            child: GlassContainer( // Your custom Glass UI
+            child: GlassContainer(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               borderRadius: BorderRadius.circular(30),
               color: Colors.black.withOpacity(0.6),
@@ -151,7 +181,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
                         : const Icon(Icons.play_arrow_rounded, color: Colors.orange, size: 28),
                     const SizedBox(width: 12),
                     Text(
-                      _isLaunching ? "AR සූදානම් වෙමින් පවතී..." : "AR අත්දැකීම අරඹන්න",
+                      _statusText,
                       style: const TextStyle(
                         color: Colors.orange,
                         fontWeight: FontWeight.bold,
