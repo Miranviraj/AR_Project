@@ -27,6 +27,7 @@ dependencies:
   latlong2: ^0.9.1
   image_picker: ^0.8.9
   google_maps_flutter: ^2.5.3
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:
@@ -47,6 +48,8 @@ flutter:
     - assets/icon.png
     - assets/labels.txt
     - assets/banner.jpg
+    - assets/models/medirigiriya.glb
+    - assets/models/polonnaruwa_watadageya.glb
     - assets/models/royal_palace.glb
     - assets/models/royal_palace.usdz
     - assets/guide_portrait.png
