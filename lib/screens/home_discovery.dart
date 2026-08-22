@@ -5,6 +5,8 @@ import 'package:camera/camera.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async'; // 🌟 Added for Auto-sliding Timer
+
 import '../widgets/app_bar_drawer.dart';
 import '../widgets/glass_container.dart';
 import 'ar_reconstruction.dart';
@@ -21,15 +23,51 @@ class HomeDiscoveryScreen extends StatefulWidget {
 }
 
 class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
-  // Cleaned up duplicate state variables
   List<dynamic> _liveRuins = [];
   bool _isLoading = true;
   String _locationError = "";
+
+
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  Timer? _sliderTimer;
+
+
+  final List<String> _bannerImages = [
+    'assets/banner3.jpg',
+    'assets/banner.jpg',
+    'assets/banner2.jpg',
+  ];
+
+  final List<String> _bannerTitles = [
+    'Explore Ancient\nCeylon',
+    'Discover Historical\nWonders',
+    'Experience True\nAR Heritage',
+  ];
 
   @override
   void initState() {
     super.initState();
     fetchLiveRuins();
+    _startSlider();
+  }
+
+
+  void _startSlider() {
+    _sliderTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_currentPage < _bannerImages.length - 1) {
+        _currentPage++;
+      } else {
+        _currentPage = 0;
+      }
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   Future<void> fetchLiveRuins() async {
@@ -39,13 +77,11 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     });
 
     try {
-      // 1. Fetch exact GPS location dynamically
       Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
       double userLat = position.latitude;
       double userLon = position.longitude;
 
-      // 2. Pass dynamic coordinates to the nearby-sites endpoint
       final url = Uri.parse('${ApiConfig().baseUrl}/api/nearby-sites?user_lat=$userLat&user_lon=$userLon&radius_km=500.0');
       final response = await http.get(url);
 
@@ -53,7 +89,6 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
         final data = jsonDecode(response.body);
 
         setState(() {
-          // 3. Update the correct list
           _liveRuins = data['sites'] ?? [];
           _isLoading = false;
         });
@@ -64,12 +99,19 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
         });
       }
     } catch (e) {
-      print("Error fetching ruins: $e");
+      debugPrint("Error fetching ruins: $e");
       setState(() {
         _locationError = "Failed to load data. Check backend connection.";
         _isLoading = false;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _sliderTimer?.cancel(); // 🌟 Cancel timer to avoid memory leaks
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -95,40 +137,79 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 80), // AppBar padding
+
+              // 🌟 The New Animated Image Slider
               AspectRatio(
-                aspectRatio: 4 / 2, // Maintained exact aspect ratio parameter
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3A2E24),
-                    borderRadius: BorderRadius.circular(16),
-                    image: const DecorationImage(
-                      image: AssetImage('assets/banner.jpg'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
+                aspectRatio: 4 / 2, // Retaining your explicit 4:2 aspect ratio requirement
+                child: Stack(
+                  children: [
+                    ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [Colors.black.withOpacity(0.9), Colors.transparent],
+                      child: PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: (int page) {
+                          setState(() {
+                            _currentPage = page;
+                          });
+                        },
+                        itemCount: _bannerImages.length,
+                        itemBuilder: (context, index) {
+                          return Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3A2E24),
+                              image: DecorationImage(
+                                image: AssetImage(_bannerImages[index]),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [Colors.black.withOpacity(0.9), Colors.transparent],
+                                ),
+                              ),
+                              padding: const EdgeInsets.all(16.0),
+                              alignment: Alignment.bottomLeft,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Strictly orange theme constraint applied
+                                  const Text('Featured Site', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 4),
+                                  Text(_bannerTitles[index], style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    padding: const EdgeInsets.all(16.0),
-                    alignment: Alignment.bottomLeft,
-                    child: const Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Applied strict orange theme
-                        Text('Featured Site', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
-                        SizedBox(height: 4),
-                        Text('Explore Ancient\nCeylon', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                      ],
+
+                    // 🌟 Animated Dots Indicator (Orange Theme)
+                    Positioned(
+                      bottom: 16,
+                      right: 16,
+                      child: Row(
+                        children: List.generate(_bannerImages.length, (index) {
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            height: 8,
+                            width: _currentPage == index ? 24 : 8, // Extends dot when active
+                            decoration: BoxDecoration(
+                              color: _currentPage == index ? Colors.orange : Colors.white38,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          );
+                        }),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
@@ -145,7 +226,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(Icons.qr_code_scanner, size: 48, color: Colors.orange), // Applied strict orange theme
+                        Icon(Icons.qr_code_scanner, size: 48, color: Colors.orange),
                         SizedBox(height: 12),
                         Text('Scan Ruins', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                         SizedBox(height: 4),
@@ -170,7 +251,6 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
                     ],
                   ),
                   TextButton(
-                    // Fixed refresh button routing to correct method
                     onPressed: () => fetchLiveRuins(),
                     child: const Icon(Icons.refresh, color: Colors.orange, size: 18),
                   )
@@ -184,7 +264,6 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
               if (!_isLoading && _liveRuins.isEmpty && _locationError.isEmpty)
                 const Text('No heritage sites found in the database.', style: TextStyle(color: Colors.grey)),
 
-              // Successfully map the backend response to the UI
               if (!_isLoading && _liveRuins.isNotEmpty)
                 ..._liveRuins.map((site) => _buildRuinsListItem(
                   context: context,

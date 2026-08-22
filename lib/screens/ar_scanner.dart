@@ -1,13 +1,16 @@
-import 'package:ar/screens/true_Ar.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:flutter/services.dart'; // 🌟 Added for Haptic Feedback (Vibration)
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
 import '../const/api_config.dart';
 import 'chat_guide.dart';
+import 'true_Ar.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/info_card.dart';
 
 class ScannerCheatScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -25,23 +28,53 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   bool _isRecognized = false;
   String _recognizedLabel = "Point at a ruin and tap Scan";
   List<dynamic> _polygonCoordinates = [];
-
-  // Dynamic 3D model URL fetched directly from backend
   String _currentModelUrl = "";
 
   static final String _backendUrl = '${ApiConfig().baseUrl}/api/detect-ruins';
+
+  // Info Card & Audio Variables
+  String _ruinDescription = "Retrieving information about this historical site...";
+  bool _isPlayingAudio = false;
+  final FlutterTts flutterTts = FlutterTts();
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
+    _initTTS();
+  }
+
+  void _initTTS() async {
+    await flutterTts.setLanguage("en-US");
+    await flutterTts.setPitch(1.0);
+    await flutterTts.setSpeechRate(0.5);
+
+    // iOS Silent Mode Bypass
+    await flutterTts.setIosAudioCategory(
+      IosTextToSpeechAudioCategory.playback,
+      [
+        IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+        IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+        IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+        IosTextToSpeechAudioCategoryOptions.defaultToSpeaker
+      ],
+      IosTextToSpeechAudioMode.defaultMode,
+    );
+
+    flutterTts.setCompletionHandler(() {
+      if (mounted) {
+        setState(() {
+          _isPlayingAudio = false;
+        });
+      }
+    });
   }
 
   Future<void> _initializeCamera() async {
     _controller = CameraController(
       widget.camera,
       ResolutionPreset.high,
-      enableAudio: false, // 🌟 Audio false to save memory during scanning
+      enableAudio: false,
     );
     await _controller!.initialize();
     if (!mounted) return;
@@ -51,19 +84,27 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   Future<void> _scanEnvironment() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
 
-    // 🌟 Haptic Feedback when scan starts
     HapticFeedback.lightImpact();
 
     setState(() {
       _isScanning = true;
       _recognizedLabel = "Analyzing structure...";
+      _ruinDescription = "Retrieving information about this historical site...";
     });
 
     try {
       final XFile imageFile = await _controller!.takePicture();
 
       var request = http.MultipartRequest('POST', Uri.parse(_backendUrl));
-      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+      // 🌟 පරණ කෝඩ් එක වෙනුවට මේ අලුත් කෝඩ් එක දාන්න 🌟
+      // (මේකෙන් ෆොටෝ එකේ Path එක වෙනුවට Bytes ටික කෙළින්ම ගන්නවා, එතකොට Web එකෙත් වැඩ!)
+      final bytes = await imageFile.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: imageFile.name,
+      ));
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -78,7 +119,6 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
 
           String modelUrl = bestMatch['model_url'] ?? '${ApiConfig().baseUrl}/static/models/medirigiriya.glb';
 
-          // 🌟 Haptic Feedback on Success! (Makes the app feel premium)
           HapticFeedback.heavyImpact();
 
           setState(() {
@@ -88,9 +128,10 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
             _currentModelUrl = modelUrl;
           });
 
+          _fetchHistoricalInfo(label);
           _saveToUnlockedSites(label);
         } else {
-          HapticFeedback.vibrate(); // Vibrate on failure
+          HapticFeedback.vibrate();
           setState(() {
             _recognizedLabel = "No ruins detected. Try another angle.";
           });
@@ -112,7 +153,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
         SnackBar(
           content: Text('Artifact Identified: $label!', style: const TextStyle(fontWeight: FontWeight.bold)),
           backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating, // Floating snackbar looks more modern
+          behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
@@ -129,12 +170,42 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
       _recognizedLabel = "Point at a ruin and tap Scan";
       _polygonCoordinates = [];
       _currentModelUrl = "";
+      _isPlayingAudio = false;
     });
+    flutterTts.stop();
+  }
+
+  Future<void> _fetchHistoricalInfo(String artifactName) async {
+    final String apiUrl = '${ApiConfig().baseUrl}/api/chat';
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "message": "Tell me about this place in 3 short sentences.",
+          "artifact_name": artifactName,
+          "target_lang_code": "en"
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            _ruinDescription = data['reply'];
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching info: $e");
+    }
   }
 
   @override
   void dispose() {
     _controller?.dispose();
+    flutterTts.stop();
     super.dispose();
   }
 
@@ -156,7 +227,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
             child: CameraPreview(_controller!),
           ),
 
-          // 2. Polygon Painter for the Ruin
+          // 2. Glowing Polygon Overlay
           if (_isRecognized && _polygonCoordinates.isNotEmpty)
             Positioned.fill(
               child: CustomPaint(
@@ -194,11 +265,36 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                   ),
                 ),
 
-                // Bottom Buttons
+                // Bottom Controls & Info Card
                 Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Info Card
+                      if (_isRecognized && _recognizedLabel.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: InfoCard(
+                            title: _recognizedLabel,
+                            description: _ruinDescription,
+                            isPlaying: _isPlayingAudio,
+                            onPlayAudio: () async {
+                              if (_isPlayingAudio) {
+                                await flutterTts.stop();
+                                setState(() {
+                                  _isPlayingAudio = false;
+                                });
+                              } else {
+                                setState(() {
+                                  _isPlayingAudio = true;
+                                });
+                                await flutterTts.speak(_ruinDescription);
+                              }
+                            },
+                          ),
+                        ),
+
                       if (!_isRecognized)
                         FloatingActionButton.extended(
                           onPressed: _isScanning ? null : _scanEnvironment,
@@ -228,7 +324,6 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                           onPressed: () async {
                             HapticFeedback.lightImpact();
 
-                            // Release camera hardware smoothly
                             if (_controller != null) {
                               await _controller!.dispose();
                               _controller = null;
@@ -238,7 +333,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
 
                             await Navigator.push(
                               context,
-                              PageRouteBuilder( // 🌟 Smooth fade transition to AR Screen
+                              PageRouteBuilder(
                                 pageBuilder: (context, animation, secondaryAnimation) => TrueARScreen(
                                   detectedRuin: _recognizedLabel,
                                   modelUrl: _currentModelUrl,
@@ -249,7 +344,6 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
                               ),
                             );
 
-                            // Restart the camera when returning
                             if (mounted) {
                               _initializeCamera();
                             }
@@ -258,7 +352,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
 
                       if (_isRecognized)
                         Padding(
-                          padding: const EdgeInsets.only(top: 16.0),
+                          padding: const EdgeInsets.only(top: 12.0),
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white.withOpacity(0.9),
@@ -282,7 +376,7 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
 
                       if (_isRecognized)
                         Padding(
-                          padding: const EdgeInsets.only(top: 12.0),
+                          padding: const EdgeInsets.only(top: 8.0),
                           child: TextButton.icon(
                             icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
                             label: const Text("Scan Another Ruin", style: TextStyle(color: Colors.white70, fontSize: 16)),
@@ -301,7 +395,6 @@ class _ScannerCheatScreenState extends State<ScannerCheatScreen> {
   }
 }
 
-// AR POLYGON PAINTER
 class RuinPolygonPainter extends CustomPainter {
   final List<dynamic> polygonPoints;
 
@@ -317,10 +410,11 @@ class RuinPolygonPainter extends CustomPainter {
 
     final paintStroke = Paint()
       ..color = Colors.orange
-      ..strokeWidth = 4.0
+      ..strokeWidth = 3.5
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 4);
 
     final path = Path();
 

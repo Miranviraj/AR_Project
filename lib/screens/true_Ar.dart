@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart'; // 🌟 Added for OpenFilex and ResultType
+import 'package:open_filex/open_filex.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import '../widgets/glass_container.dart';
@@ -22,17 +22,15 @@ class TrueARScreen extends StatefulWidget {
 
 class _TrueARScreenState extends State<TrueARScreen> {
   bool _isLaunching = false;
-  String _statusText = "AR අත්දැකීම අරඹන්න"; // 🌟 Defined the status text variable
+  String _statusText = "Start AR Experience";
 
-  // 🌟 NATIVE AR LAUNCHER: Deep Link Intent (Bypasses Chrome Completely!)
   Future<void> _launchNativeAR() async {
     setState(() {
       _isLaunching = true;
-      _statusText = "AR සූදානම් වෙමින් පවතී...";
+      _statusText = "Processing AR..";
     });
 
     try {
-      // Clean URL Extension
       String rawUrl = widget.modelUrl;
       if (rawUrl.endsWith('.usdz')) {
         rawUrl = rawUrl.substring(0, rawUrl.length - 5);
@@ -41,39 +39,32 @@ class _TrueARScreenState extends State<TrueARScreen> {
       }
 
       if (Platform.isAndroid) {
-        // ANDROID: Launch Google Scene Viewer via Intent (Bypass Browser)
         final String androidUrl = '$rawUrl.glb';
         final String encodedUrl = Uri.encodeComponent(androidUrl);
         final String encodedTitle = Uri.encodeComponent(widget.detectedRuin);
 
-        // 🌟 THE MAGIC FIX: Android Intent URL
         final String intentUrl = 'intent://arvr.google.com/scene-viewer/1.0?file=$encodedUrl&title=$encodedTitle&mode=ar_only&resizable=true#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;';
 
         try {
-          // Launch the Intent directly
           await launchUrl(Uri.parse(intentUrl), mode: LaunchMode.externalApplication);
         } catch (e) {
-          // Fallback if the intent completely fails
           final Uri fallbackUri = Uri.parse('https://arvr.google.com/scene-viewer/1.0?file=$encodedUrl&title=$encodedTitle&mode=ar_only');
           await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
         }
 
       } else if (Platform.isIOS) {
-        // IOS: Bypass HTTP restriction by downloading locally first
         setState(() { _statusText = "Downloading iOS Model..."; });
 
         final String iosUrl = '$rawUrl.usdz';
         final response = await http.get(Uri.parse(iosUrl));
 
         if (response.statusCode == 200) {
-          // Save to temporary directory
           final dir = await getTemporaryDirectory();
           final safeName = widget.detectedRuin.replaceAll(' ', '_');
           final localFile = File('${dir.path}/$safeName.usdz');
 
           await localFile.writeAsBytes(response.bodyBytes);
 
-          // Launch local USDZ file natively using open_filex
           final result = await OpenFilex.open(localFile.path);
           if (result.type != ResultType.done) {
             throw 'Error opening AR file: ${result.message}';
@@ -96,7 +87,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
       if (mounted) {
         setState(() {
           _isLaunching = false;
-          _statusText = "AR අත්දැකීම අරඹන්න";
+          _statusText = "Start AR Experience";
         });
       }
     }
@@ -105,7 +96,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Sleek black background
+      backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(widget.detectedRuin),
@@ -116,18 +107,16 @@ class _TrueARScreenState extends State<TrueARScreen> {
       ),
       body: Stack(
         children: [
-          // Background Image
           Positioned.fill(
             child: Opacity(
               opacity: 0.4,
               child: Image.asset(
-                'Images/triangle.png', // Background image
+                'assets/banner.jpg',
                 fit: BoxFit.cover,
               ),
             ),
           ),
 
-          // Main Content
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -139,7 +128,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  "${widget.detectedRuin} හඳුනාගත්තා!",
+                  "${widget.detectedRuin} Detected!",
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -148,7 +137,7 @@ class _TrueARScreenState extends State<TrueARScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  "AR අත්දැකීම ලබාගැනීමට පහත බොත්තම ඔබන්න",
+                  "Click Below Button For AR",
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 16,
@@ -158,7 +147,6 @@ class _TrueARScreenState extends State<TrueARScreen> {
             ),
           ),
 
-          // Launch AR Button at the bottom
           Positioned(
             bottom: 50,
             left: 20,

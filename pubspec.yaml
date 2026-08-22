@@ -49,6 +49,9 @@ flutter:
     - assets/icon.png
     - assets/labels.txt
     - assets/banner.jpg
+    - assets/banner2.jpg
+    - assets/banner3.jpg
+    - assets/splash_bg.jpg
     - assets/models/medirigiriya.glb
     - assets/models/polonnaruwa_watadageya.glb
     - assets/models/royal_palace.glb

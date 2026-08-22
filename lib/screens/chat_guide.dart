@@ -7,7 +7,7 @@ import '../const/api_config.dart';
 import '../widgets/glass_container.dart';
 
 class ChatGuideScreen extends StatefulWidget {
-  final String? recognizedArtifact; // Nullable when no ruin is detected
+  final String? recognizedArtifact;
 
   const ChatGuideScreen({super.key, this.recognizedArtifact});
 
@@ -28,6 +28,9 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     'Sinhala': 'si',
   };
 
+  bool _isLoading = false;
+  bool _hasShownImage = false;
+
   static final String _backendUrl = '${ApiConfig().baseUrl}/api/chat';
 
   final FlutterTts _flutterTts = FlutterTts();
@@ -36,35 +39,68 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // Stores chat data including optional image URLs
   final List<Map<String, dynamic>> _messages = [];
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _initTts();
 
-    // Check if we came from the AR scanner with a detected ruin
     if (widget.recognizedArtifact != null && widget.recognizedArtifact!.trim().isNotEmpty) {
       triggerDetectedSiteChat(widget.recognizedArtifact!);
     } else {
       _sendInitialGreeting();
     }
-  } // 🌟 FIX: Properly closed initState
+  }
 
   Future<void> _initTts() async {
     await _flutterTts.setLanguage("en-US");
-    await _flutterTts.setSpeechRate(0.5);
-    await _flutterTts.setPitch(1.0);
+
+
+    await _flutterTts.setSpeechRate(0.45);
+
+
+    await _flutterTts.setPitch(1.15);
+
+
+    try {
+      List<dynamic> voices = await _flutterTts.getVoices;
+      for (var voice in voices) {
+        String voiceName = voice["name"].toString();
+        if (voiceName.contains("Samantha") || voiceName.contains("Karen") || voiceName.contains("en-us-x-sfg")) {
+          await _flutterTts.setVoice({"name": voice["name"], "locale": voice["locale"]});
+          break;
+        }
+      }
+    } catch (e) {
+      debugPrint("Voice setting error: $e");
+    }
+
+    // 🌟 iOS Silent Mode Bypass
+    await _flutterTts.setIosAudioCategory(
+      IosTextToSpeechAudioCategory.playback,
+      [
+        IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+        IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+        IosTextToSpeechAudioCategoryOptions.mixWithOthers,
+        IosTextToSpeechAudioCategoryOptions.defaultToSpeaker
+      ],
+      IosTextToSpeechAudioMode.defaultMode,
+    );
 
     _flutterTts.setCompletionHandler(() {
+      if (mounted) setState(() => _isSpeaking = false);
+    });
+
+    _flutterTts.setErrorHandler((msg) {
+      debugPrint("TTS ERROR: $msg");
       if (mounted) setState(() => _isSpeaking = false);
     });
   }
 
   Future<void> _speak(String text) async {
     String cleanText = text.replaceAll(RegExp(r'\*|\#'), '');
+    await _flutterTts.stop();
     setState(() => _isSpeaking = true);
     await _flutterTts.speak(cleanText);
   }
@@ -91,7 +127,6 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
     _speak(greetingText);
   }
 
-  // 🌟 FIX: Updated to match your Map<String, dynamic> structure and use _backendUrl
   Future<void> triggerDetectedSiteChat(String detectedSiteName) async {
     setState(() {
       _messages.add({
@@ -108,7 +143,7 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'message': "Tell me the historical significance of $detectedSiteName.",
-          'detected_site': detectedSiteName, // Tells the backend to fetch the image URL
+          'artifact_name': detectedSiteName,
           'target_lang_code': _backendLangCodes[_selectedLanguage] ?? 'en'
         }),
       );
@@ -120,9 +155,15 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
           _messages.add({
             'role': 'ai',
             'text': data['reply'] ?? "I found some information about this site.",
-            'imageUrl': data['image_url'], // 🌟 Captures the image URL
+
+            'imageUrl': _hasShownImage ? null : data['image_url'],
           });
           _isLoading = false;
+
+
+          if (data['image_url'] != null && data['image_url'].toString().isNotEmpty) {
+            _hasShownImage = true;
+          }
         });
 
         _scrollToBottom();
@@ -157,15 +198,12 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
 
     try {
       final bool hasArtifact = widget.recognizedArtifact != null && widget.recognizedArtifact!.trim().isNotEmpty;
-      final String contextPrompt = hasArtifact
-          ? "Regarding the ${widget.recognizedArtifact}: $text"
-          : text;
-
       final response = await http.post(
         Uri.parse(_backendUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'message': contextPrompt,
+          'message': text,
+          'artifact_name': hasArtifact ? widget.recognizedArtifact : null,
           'target_lang_code': _backendLangCodes[_selectedLanguage] ?? 'en'
         }),
       );
@@ -178,9 +216,14 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
           _messages.add({
             'role': 'ai',
             'text': aiText,
-            'imageUrl': data['image_url'] // In case a general query also returns an image
+
+            'imageUrl': _hasShownImage ? null : data['image_url']
           });
           _isLoading = false;
+
+          if (data['image_url'] != null && data['image_url'].toString().isNotEmpty) {
+            _hasShownImage = true;
+          }
         });
 
         _scrollToBottom();
@@ -226,7 +269,24 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          title: const Text('Digital Guide', style: TextStyle(fontSize: 16)),
+          // 🌟 Back arrow එකේ පාට වෙනස් කිරීම
+          iconTheme: const IconThemeData(
+            color: Colors.orange,
+            size: 28, // ටිකක් ලොකුවට පැහැදිලිව පේන්න
+          ),
+
+          // 🌟 Title එක ලස්සන කිරීම (පාට, ප්‍රමාණය, අකුරු වල ඝනකම සහ පරතරය)
+          title: const Text(
+              'Digital Guide',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Colors.orange,
+                letterSpacing: 1.2, // අකුරු අතර පොඩි ඉඩක් තියනවා ලස්සන වෙන්න
+              )
+          ),
+
+          centerTitle: false, // Title එක වම් පැත්තට බරව තියෙන්න දෙනවා (Modern Look)
           backgroundColor: Colors.transparent,
           elevation: 0,
           actions: [
@@ -308,7 +368,6 @@ class _ChatGuideScreenState extends State<ChatGuideScreen> {
                                       height: 1.4,
                                     )
                                 ),
-                                // 🌟 FIX: Render Image beneath text if imageUrl exists
                                 if (!isUser && message['imageUrl'] != null && message['imageUrl'].toString().isNotEmpty) ...[
                                   const SizedBox(height: 12),
                                   ClipRRect(
